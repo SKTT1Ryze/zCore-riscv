@@ -5,3 +5,4 @@ target = "riscv64imac-unknown-none-elf"
 rustflags = [
     "-C", "link-arg=-Tsrc/linker/linker.ld",
 ]
+#target = "riscv64-zCore.json"
