@@ -1,48 +1,45 @@
-OUTPUT_ARCH(riscv)
 
+OUTPUT_ARCH(riscv)
 ENTRY(_start)
 
-/* 数据存放起始地址 */
 BASE_ADDRESS = 0x80200000;
 
 SECTIONS
 {
-    /* . 表示当前地址（location counter） */
+    /* Load the kernel at this address: "." means the current address */
     . = BASE_ADDRESS;
+    start = .;
 
-    /* start 符号表示全部的开始位置 */
-    kernel_start = .;
-
-    text_start = .;
-
-    /* .text 字段 */
     .text : {
-        /* 把 entry 函数放在最前面 */
+        stext = .;
         *(.text.entry)
         *(.text .text.*)
+        . = ALIGN(4K);
+        etext = .;
     }
 
-    rodata_start = .;
-
-    /* .rodata 字段 */
     .rodata : {
+        srodata = .;
         *(.rodata .rodata.*)
+        . = ALIGN(4K);
+        erodata = .;
     }
 
-    data_start = .;
-
-    /* .data 字段 */
     .data : {
+        sdata = .;
         *(.data .data.*)
+        edata = .;
     }
 
-    bss_start = .;
+    .stack : {
+        *(.bss.stack)
+    }
 
-    /* .bss 字段 */
     .bss : {
-        *(.sbss .bss .bss.*)
+        sbss = .;
+        *(.bss .bss.*)
+        ebss = .;
     }
 
-    /* 结束地址 */
-    kernel_end = .;
+    PROVIDE(end = .);
 }

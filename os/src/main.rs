@@ -39,6 +39,8 @@ use fake_test::{
     alloc_test,
     fill_random_test,
     frame_test,
+    pmem_test,
+    page_table_test,
 };
 
 use alloc::sync::Arc;
@@ -57,6 +59,8 @@ pub extern "C" fn rust_main() -> ! {
     trapframe_test();
     fill_random_test();
     frame_test();
+    //pmem_test();
+    //page_table_test();
     panic!("Hi, panic here...")
 }
 

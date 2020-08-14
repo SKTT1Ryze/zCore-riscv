@@ -47,13 +47,19 @@ impl PageTableTrait for PageTableImpl {
     /// Map the page of `vaddr` to the frame of `paddr` with `flags`.
     #[export_name = "hal_pt_map"]
     fn map(&mut self, vaddr: VirtAddr, paddr: PhysAddr, flags: MMUFlags) -> Result<(), ()> {
+        print!("log 0");
         let mut pt = self.get();
+        print!("log 1");
         let page = Page::of_addr(riscv::addr::VirtAddr::new(vaddr));
+        print!("log 2");
         let frame = riscv::addr::Frame::of_addr(riscv::addr::PhysAddr::new(paddr));
+        print!("log 3");
         pt.map_to(page, frame, flags.to_ptf(), &mut FrameAllocatorImpl)
             .unwrap()
             .flush();
+            print!("log 4");            
         trace!("map: {:x?} -> {:x?}, flags={:?}", vaddr, paddr, flags);
+        print!("log 5");
         Ok(())
     }
 
