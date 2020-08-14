@@ -38,6 +38,7 @@ use fake_test::{
     kobject_test,
     alloc_test,
     fill_random_test,
+    frame_test,
 };
 
 use alloc::sync::Arc;
@@ -55,6 +56,7 @@ pub extern "C" fn rust_main() -> ! {
     alloc_test();
     trapframe_test();
     fill_random_test();
+    frame_test();
     panic!("Hi, panic here...")
 }
 
