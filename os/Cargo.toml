@@ -12,6 +12,14 @@ downcast-rs = { version = "1.2.0", default-features = false }
 log = "0.4"
 riscv = { git = "https://github.com/rcore-os/riscv", features = ["inline-asm"] }
 buddy_system_allocator = "0.3.9"
+bitflags = "1.2"
+trapframe = "0.5.1"
+numeric-enum-macro = "0.2"
+acpi = "1.0.0"
+git-version = "0.3"
+lazy_static = { version = "1.4", features = ["spin_no_std" ] }
+naive-timer = "0.1.0"
+executor = { git = "https://github.com/rcore-os/executor.git", rev = "a2d02ee9" }
 
 # exit when panic occur
 [profile.dev]
