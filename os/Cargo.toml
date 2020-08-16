@@ -3,6 +3,7 @@ name = "os"
 version = "0.1.0"
 authors = ["hustccc <1276675421@qq.com>"]
 edition = "2018"
+description = "zCore on riscv"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -20,6 +21,13 @@ git-version = "0.3"
 lazy_static = { version = "1.4", features = ["spin_no_std" ] }
 naive-timer = "0.1.0"
 executor = { git = "https://github.com/rcore-os/executor.git", rev = "a2d02ee9" }
+hashbrown = "0.7"
+futures = { version = "0.3", default-features = false, features = ["alloc", "async-await"] }
+xmas-elf = { version = "0.7", optional = true }
+region-alloc = { git = "https://github.com/rzswh/region-allocator", rev = "122c7a71" }
+
+[dev-dependencies]
+
 
 # exit when panic occur
 [profile.dev]

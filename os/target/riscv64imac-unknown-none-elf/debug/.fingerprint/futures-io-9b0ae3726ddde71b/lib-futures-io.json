@@ -1,0 +1,1 @@
+{"rustc":11719010198259268628,"features":"[]","target":374006562708233144,"profile":13134100034870027236,"path":15126246985108995171,"deps":[],"local":[{"CheckDepInfo":{"dep_info":"riscv64imac-unknown-none-elf/debug/.fingerprint/futures-io-9b0ae3726ddde71b/dep-lib-futures-io"}}],"rustflags":["-C","link-arg=-Tsrc/linker/linker.ld"],"metadata":6274769968791134284,"config":0}

@@ -1,0 +1,1 @@
+{"rustc":11719010198259268628,"features":"[]","target":4635169457771671444,"profile":8826605187205572883,"path":15690835918125721303,"deps":[],"local":[{"CheckDepInfo":{"dep_info":"riscv64imac-unknown-none-elf/debug/.fingerprint/region-alloc-b0f35d877aab7c8f/dep-lib-region-alloc"}}],"rustflags":["-C","link-arg=-Tsrc/linker/linker.ld"],"metadata":1614317371747285218,"config":0}

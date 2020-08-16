@@ -9,6 +9,13 @@
 #![feature(panic_info_message)]
 #![feature(alloc_error_handler)]
 #![feature(linkage)]
+#![feature(drain_filter)]
+#![feature(get_mut_unchecked)]
+#![feature(naked_functions)]
+#![feature(ptr_offset_from)]
+#![feature(range_is_empty)]
+#![feature(new_uninit)]
+#![feature(const_in_array_repeat_expressions)]
 
 #[macro_use]
 mod console;
@@ -28,22 +35,19 @@ extern crate log;
 #[macro_use]
 extern crate lazy_static;
 
-use zircon_object::object::{
-    KernelObject,
-    DummyObject,
-};
-
 use fake_test::{
     trapframe_test,
-    kobject_test,
     alloc_test,
     fill_random_test,
     frame_test,
     pmem_test,
     page_table_test,
+    zircon_object_test::object_test::test_all_in_object_test,
+    zircon_object_test::signal_test::test_all_in_signal_test,
+    zircon_object_test::task_test::test_all_in_task_test,
+    zircon_object_test::ipc_test::test_all_in_ipc_test,
 };
 
-use alloc::sync::Arc;
 
 
 //entry
@@ -54,13 +58,16 @@ global_asm!(include_str!("asm/entry.asm"));
 pub extern "C" fn rust_main() -> ! {
     println!("Welcome to zCore on riscv64");
     memory::init();
-    kobject_test();
     alloc_test();
     trapframe_test();
     fill_random_test();
     frame_test();
     //pmem_test();
     //page_table_test();
-    panic!("Hi, panic here...")
+    test_all_in_object_test();
+    test_all_in_signal_test();
+    test_all_in_task_test();
+    test_all_in_ipc_test();
+    panic!("Panic at the end...")
 }
 

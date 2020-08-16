@@ -23,6 +23,7 @@ impl Thread {
         _future: Pin<Box<dyn Future<Output = ()> + Send + 'static>>,
         _vmtoken: usize,
     ) -> Self {
+        println!("unimplemented in src/kernel_hal/dummy.rs impl Thread");
         unimplemented!()
     }
 
@@ -30,6 +31,7 @@ impl Thread {
     #[linkage = "weak"]
     #[export_name = "hal_thread_set_tid"]
     pub fn set_tid(_tid: u64, _pid: u64) {
+        println!("unimplemented in src/kernel_hal/dummy.rs impl Thread");
         unimplemented!()
     }
 
@@ -37,6 +39,7 @@ impl Thread {
     #[linkage = "weak"]
     #[export_name = "hal_thread_get_tid"]
     pub fn get_tid() -> (u64, u64) {
+        println!("unimplemented in src/kernel_hal/dummy.rs impl Thread");
         unimplemented!()
     }
 }
@@ -44,6 +47,7 @@ impl Thread {
 #[linkage = "weak"]
 #[export_name = "hal_context_run"]
 pub fn context_run(_context: &mut UserContext) {
+    println!("unimplemented in src/kernel_hal/dummy.rs context_run");
     unimplemented!()
 }
 
@@ -110,6 +114,7 @@ impl PageTable {
     #[linkage = "weak"]
     #[export_name = "hal_pt_current"]
     pub fn current() -> Self {
+        println!("unimplemented in src/kernel_hal/dummy.rs impl PageTable current()");
         unimplemented!()
     }
 
@@ -118,6 +123,7 @@ impl PageTable {
     #[linkage = "weak"]
     #[export_name = "hal_pt_new"]
     pub fn new() -> Self {
+        println!("unimplemented in src/kernel_hal/dummy.rs impl PageTable new()");
         unimplemented!()
     }
 }
@@ -172,12 +178,14 @@ impl PhysFrame {
     #[linkage = "weak"]
     #[export_name = "hal_frame_alloc"]
     pub extern "C" fn alloc() -> Option<Self> {
+        println!("unimplemented in src/kernel_hal/dummy.rs impl PhysFrame");
         unimplemented!()
     }
 
     #[linkage = "weak"]
     #[export_name = "hal_frame_alloc_contiguous"]
     pub extern "C" fn alloc_contiguous_base(_size: usize, _align_log2: usize) -> Option<PhysAddr> {
+        println!("unimplemented in src/kernel_hal/dummy.rs impl PhysFrame");
         unimplemented!()
     }
 
@@ -198,6 +206,7 @@ impl PhysFrame {
     #[linkage = "weak"]
     #[export_name = "hal_zero_frame_paddr"]
     pub fn zero_frame_addr() -> PhysAddr {
+        println!("unimplemented in src/kernel_hal/dummy.rs impl PhysFrame");
         unimplemented!()
     }
 }
@@ -206,6 +215,7 @@ impl Drop for PhysFrame {
     #[linkage = "weak"]
     #[export_name = "hal_frame_dealloc"]
     fn drop(&mut self) {
+        println!("unimplemented in src/kernel_hal/dummy.rs impl Drop for PhysFrame");
         unimplemented!()
     }
 }
@@ -214,6 +224,7 @@ impl Drop for PhysFrame {
 #[linkage = "weak"]
 #[export_name = "hal_pmem_read"]
 pub fn pmem_read(_paddr: PhysAddr, _buf: &mut [u8]) {
+    println!("unimplemented in src/kernel_hal/dummy.rs pmem_read");
     unimplemented!()
 }
 
@@ -221,6 +232,7 @@ pub fn pmem_read(_paddr: PhysAddr, _buf: &mut [u8]) {
 #[linkage = "weak"]
 #[export_name = "hal_pmem_write"]
 pub fn pmem_write(_paddr: PhysAddr, _buf: &[u8]) {
+    println!("unimplemented in src/kernel_hal/dummy.rs pmem_write");
     unimplemented!()
 }
 
@@ -228,6 +240,7 @@ pub fn pmem_write(_paddr: PhysAddr, _buf: &[u8]) {
 #[linkage = "weak"]
 #[export_name = "hal_frame_copy"]
 pub fn frame_copy(_src: PhysAddr, _target: PhysAddr) {
+    println!("unimplemented in src/kernel_hal/dummy.rs frame_copy");
     unimplemented!()
 }
 
@@ -235,6 +248,7 @@ pub fn frame_copy(_src: PhysAddr, _target: PhysAddr) {
 #[linkage = "weak"]
 #[export_name = "hal_frame_zero"]
 pub fn frame_zero_in_range(_target: PhysAddr, _start: usize, _end: usize) {
+    println!("unimplemented in src/kernel_hal/dummy.rs frame_zero_in_range");
     unimplemented!()
 }
 
@@ -242,6 +256,7 @@ pub fn frame_zero_in_range(_target: PhysAddr, _start: usize, _end: usize) {
 #[linkage = "weak"]
 #[export_name = "hal_frame_flush"]
 pub fn frame_flush(_target: PhysAddr) {
+    println!("unimplemented in src/kernel_hal/dummy.rs frame_flush");
     unimplemented!()
 }
 
@@ -249,6 +264,7 @@ pub fn frame_flush(_target: PhysAddr) {
 #[linkage = "weak"]
 #[export_name = "hal_serial_set_callback"]
 pub fn serial_set_callback(_callback: Box<dyn FnOnce() + Send + Sync>) {
+    println!("unimplemented in src/kernel_hal/dummy.rs serial_set_callback");
     unimplemented!()
 }
 
@@ -256,6 +272,7 @@ pub fn serial_set_callback(_callback: Box<dyn FnOnce() + Send + Sync>) {
 #[linkage = "weak"]
 #[export_name = "hal_serial_read"]
 pub fn serial_read(_buf: &mut [u8]) -> usize {
+    println!("unimplemented in src/kernel_hal/dummy.rs serial_read");
     unimplemented!()
 }
 
@@ -263,6 +280,7 @@ pub fn serial_read(_buf: &mut [u8]) -> usize {
 #[linkage = "weak"]
 #[export_name = "hal_serial_write"]
 pub fn serial_write(_s: &str) {
+    println!("unimplemented in src/kernel_hal/dummy.rs serial_write");
     unimplemented!()
 }
 
@@ -270,6 +288,7 @@ pub fn serial_write(_s: &str) {
 #[linkage = "weak"]
 #[export_name = "hal_timer_now"]
 pub fn timer_now() -> Duration {
+    println!("unimplemented in src/kernel_hal/dummy.rs timer_now");
     unimplemented!()
 }
 
@@ -277,6 +296,7 @@ pub fn timer_now() -> Duration {
 #[linkage = "weak"]
 #[export_name = "hal_timer_set"]
 pub fn timer_set(_deadline: Duration, _callback: Box<dyn FnOnce(Duration) + Send + Sync>) {
+    println!("unimplemented in src/kernel_hal/dummy.rs timer_set");
     unimplemented!()
 }
 
@@ -284,6 +304,7 @@ pub fn timer_set(_deadline: Duration, _callback: Box<dyn FnOnce(Duration) + Send
 #[linkage = "weak"]
 #[export_name = "hal_timer_tick"]
 pub fn timer_tick() {
+    println!("unimplemented in src/kernel_hal/dummy.rs timer_tick");
     unimplemented!()
 }
 
@@ -293,46 +314,54 @@ impl InterruptManager {
     #[linkage = "weak"]
     #[export_name = "hal_irq_handle"]
     pub fn handle(_irq: u8) {
+        println!("unimplemented in src/kernel_hal/dummy.rs impl InterruptManager");
         unimplemented!()
     }
     ///
     #[linkage = "weak"]
     #[export_name = "hal_ioapic_set_handle"]
     pub fn set_ioapic_handle(_global_irq: u32, _handle: Box<dyn Fn() + Send + Sync>) -> Option<u8> {
+        println!("unimplemented in src/kernel_hal/dummy.rs impl InterruptManager");
         unimplemented!()
     }
     /// Add an interrupt handle to an irq
     #[linkage = "weak"]
     #[export_name = "hal_irq_add_handle"]
     pub fn add_handle(_global_irq: u8, _handle: Box<dyn Fn() + Send + Sync>) -> Option<u8> {
+        println!("unimplemented in src/kernel_hal/dummy.rs impl InterruptManager");
         unimplemented!()
     }
     ///
     #[linkage = "weak"]
     #[export_name = "hal_ioapic_reset_handle"]
     pub fn reset_ioapic_handle(_global_irq: u32) -> bool {
+        println!("unimplemented in src/kernel_hal/dummy.rs impl InterruptManager");
         unimplemented!()
     }
     /// Remove the interrupt handle of an irq
     #[linkage = "weak"]
     #[export_name = "hal_irq_remove_handle"]
     pub fn remove_handle(_irq: u8) -> bool {
+        println!("unimplemented in src/kernel_hal/dummy.rs impl InterruptManager");
         unimplemented!()
     }
     /// Allocate contiguous positions for irq
     #[linkage = "weak"]
     #[export_name = "hal_irq_allocate_block"]
     pub fn allocate_block(_irq_num: u32) -> Option<(usize, usize)> {
+        println!("unimplemented in src/kernel_hal/dummy.rs impl InterruptManager");
         unimplemented!()
     }
     #[linkage = "weak"]
     #[export_name = "hal_irq_free_block"]
     pub fn free_block(_irq_start: u32, _irq_num: u32) {
+        println!("unimplemented in src/kernel_hal/dummy.rs impl InterruptManager");
         unimplemented!()
     }
     #[linkage = "weak"]
     #[export_name = "hal_irq_overwrite_handler"]
     pub fn overwrite_handler(_msi_id: u32, _handle: Box<dyn Fn() + Send + Sync>) -> bool {
+        println!("unimplemented in src/kernel_hal/dummy.rs impl InterruptManager");
         unimplemented!()
     }
 
@@ -340,6 +369,7 @@ impl InterruptManager {
     #[linkage = "weak"]
     #[export_name = "hal_irq_enable"]
     pub fn enable(_global_irq: u32) {
+        println!("unimplemented in src/kernel_hal/dummy.rs impl InterruptManager");
         unimplemented!()
     }
 
@@ -347,12 +377,14 @@ impl InterruptManager {
     #[linkage = "weak"]
     #[export_name = "hal_irq_disable"]
     pub fn disable(_global_irq: u32) {
+        println!("unimplemented in src/kernel_hal/dummy.rs impl InterruptManager");
         unimplemented!()
     }
     /// Get IO APIC maxinstr
     #[linkage = "weak"]
     #[export_name = "hal_irq_maxinstr"]
     pub fn maxinstr(_irq: u32) -> Option<u8> {
+        println!("unimplemented in src/kernel_hal/dummy.rs impl InterruptManager");
         unimplemented!()
     }
     #[linkage = "weak"]
@@ -364,11 +396,13 @@ impl InterruptManager {
         _level_trig: bool,
         _active_high: bool,
     ) -> bool {
+        println!("unimplemented in src/kernel_hal/dummy.rs impl InterruptManager");
         unimplemented!()
     }
     #[linkage = "weak"]
     #[export_name = "hal_irq_isvalid"]
     pub fn is_valid(_irq: u32) -> bool {
+        println!("unimplemented in src/kernel_hal/dummy.rs impl InterruptManager");
         unimplemented!()
     }
 }
@@ -377,6 +411,7 @@ impl InterruptManager {
 #[linkage = "weak"]
 #[export_name = "hal_vdso_constants"]
 pub fn vdso_constants() -> VdsoConstants {
+    println!("unimplemented in src/kernel_hal/dummy.rs vdso_constants");
     unimplemented!()
 }
 
