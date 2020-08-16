@@ -53,7 +53,7 @@ impl Thread {
         }
     }
 
-    #[export_name = "hal_thread_spawn_implemented"]
+    #[export_name = "hal_thread_spawn"]
     pub fn spawn(
         future: Pin<Box<dyn Future<Output = ()> + Send + 'static>>,
         vmtoken: usize,
@@ -79,18 +79,18 @@ impl Thread {
         Thread { thread: 0 }
     }
 
-    #[export_name = "hal_thread_set_tid_implemented"]
+    #[export_name = "hal_thread_set_tid"]
     pub fn set_tid(_tid: u64, _pid: u64) {
         println!("set_tid() in src/kernel_hal_bare/mod.rs");
     }
 
-    #[export_name = "hal_thread_get_tid_implemented"]
+    #[export_name = "hal_thread_get_tid"]
     pub fn get_tid() -> (u64, u64) {
         (0, 0)
     }
 }
 
-#[export_name = "hal_context_run_implemented"]
+#[export_name = "hal_context_run"]
 pub fn context_run(context: &mut UserContext) {
     context.run();
 }
@@ -122,7 +122,7 @@ impl Frame {
         }
     }
 
-    #[export_name = "hal_zero_frame_paddr_implemented"]
+    #[export_name = "hal_zero_frame_paddr"]
     pub fn zero_frame_addr() -> PhysAddr {
         #[repr(align(0x1000))]
         struct Page([u8; PAGE_SIZE]);
@@ -136,7 +136,7 @@ fn phys_to_virt(paddr: PhysAddr) -> VirtAddr {
 }
 
 /// Read physical memory from `paddr` to `buf`.
-#[export_name = "hal_pmem_read_implemented"]
+#[export_name = "hal_pmem_read"]
 pub fn pmem_read(paddr: PhysAddr, buf: &mut [u8]) {
     trace!("pmem_read: addr={:#x}, len={:#x}", paddr, buf.len());
     unsafe {
@@ -145,7 +145,7 @@ pub fn pmem_read(paddr: PhysAddr, buf: &mut [u8]) {
 }
 
 /// Write physical memory to `paddr` from `buf`.
-#[export_name = "hal_pmem_write_implemented"]
+#[export_name = "hal_pmem_write"]
 pub fn pmem_write(paddr: PhysAddr, buf: &[u8]) {
     trace!("pmem_write: addr={:#x}, len={:#x}", paddr, buf.len());
     unsafe {
@@ -155,7 +155,7 @@ pub fn pmem_write(paddr: PhysAddr, buf: &[u8]) {
 }
 
 /// Zero `target` frame.
-#[export_name = "hal_frame_zero_implemented"]
+#[export_name = "hal_frame_zero"]
 pub fn frame_zero_in_range(target: PhysAddr, start: usize, end: usize) {
     assert!(start < PAGE_SIZE && end <= PAGE_SIZE);
     trace!("frame_zero: {:#x}", target);
@@ -168,7 +168,7 @@ lazy_static! {
     pub static ref NAIVE_TIMER: Mutex<Timer> = Mutex::new(Timer::default());
 }
 
-#[export_name = "hal_timer_set_implemented"]
+#[export_name = "hal_timer_set"]
 pub fn timer_set(deadline: Duration, callback: Box<dyn FnOnce(Duration) + Send + Sync>) {
     NAIVE_TIMER.lock().add(deadline, callback);
 }

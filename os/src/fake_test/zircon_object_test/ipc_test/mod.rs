@@ -18,4 +18,5 @@ pub fn test_all_in_ipc_test() {
     test_threshold();
     test_shutdown();
     test_drop();
+    println!("all test in ipc_test pass");
 }
