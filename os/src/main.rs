@@ -46,6 +46,7 @@ use fake_test::{
     zircon_object_test::signal_test::test_all_in_signal_test,
     zircon_object_test::task_test::test_all_in_task_test,
     zircon_object_test::ipc_test::test_all_in_ipc_test,
+    zircon_object_test::vm_test::test_all_in_vm_test,
 };
 
 
@@ -61,13 +62,14 @@ pub extern "C" fn rust_main() -> ! {
     alloc_test();
     trapframe_test();
     fill_random_test();
-    frame_test();
+    //frame_test();
     //pmem_test();
     //page_table_test();
     test_all_in_object_test();
     test_all_in_signal_test();
     test_all_in_task_test();
     test_all_in_ipc_test();
+    test_all_in_vm_test();
     panic!("Panic at the end...")
 }
 

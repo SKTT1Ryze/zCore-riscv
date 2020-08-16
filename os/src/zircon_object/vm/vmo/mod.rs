@@ -110,6 +110,8 @@ pub struct VmObject {
     inner: Arc<dyn VMObjectTrait>,
 }
 
+
+
 impl_kobject!(VmObject);
 define_count_helper!(VmObject);
 
@@ -309,6 +311,19 @@ impl VmObject {
     pub fn is_contiguous(&self) -> bool {
         self.inner.is_contiguous()
     }
+    pub fn test_write(&self, page: usize, value: u8) {
+        self.write(page * PAGE_SIZE, &[value]).unwrap();
+    }
+
+    pub fn test_read(&self, page: usize) -> u8 {
+        let mut buf = [0; 1];
+        self.read(page * PAGE_SIZE, &mut buf).unwrap();
+        buf[0]
+    }
+
+    pub fn test_inner(&self) -> Arc<dyn VMObjectTrait> {
+        self.inner.clone()
+    }
 }
 
 impl Deref for VmObject {
@@ -385,6 +400,12 @@ pub struct VmoInfo {
     cache_policy: u32,
 }
 
+impl VmoInfo {
+    pub fn committed_bytes(&self) -> u64 {
+        self.committed_bytes
+    }
+}
+
 bitflags! {
     #[derive(Default)]
     pub struct VmoInfoFlags: u32 {
@@ -406,14 +427,3 @@ pub enum RangeChangeOp {
     RemoveWrite,
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    pub fn read_write(vmo: &VmObject) {
-        let mut buf = [0u8; 4];
-        vmo.write(0, &[0, 1, 2, 3]).unwrap();
-        vmo.read(0, &mut buf).unwrap();
-        assert_eq!(&buf, &[0, 1, 2, 3]);
-    }
-}

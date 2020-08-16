@@ -558,15 +558,15 @@ impl VmAddressRegion {
         None
     }
 
-    #[cfg(test)]
-    fn count(&self) -> usize {
+    
+    pub fn count(&self) -> usize {
         let mut guard = self.inner.lock();
         let inner = guard.as_mut().unwrap();
         inner.mappings.len() + inner.children.len()
     }
 
-    #[cfg(test)]
-    fn used_size(&self) -> usize {
+    
+    pub fn used_size(&self) -> usize {
         let mut guard = self.inner.lock();
         let inner = guard.as_mut().unwrap();
         let map_size: usize = inner.mappings.iter().map(|map| map.size()).sum();
