@@ -1,1 +1,0 @@
-{"rustc":11719010198259268628,"features":"[]","target":3212487439712232774,"profile":6299028598154287785,"path":15060233658935258189,"deps":[],"local":[{"CheckDepInfo":{"dep_info":"riscv64imac-unknown-none-elf/debug/.fingerprint/ahash-6c239ca76fedc135/dep-lib-ahash"}}],"rustflags":["-C","link-arg=-Tsrc/linker/linker.ld"],"metadata":6548036084630991988,"config":0}

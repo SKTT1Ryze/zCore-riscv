@@ -1,1 +1,0 @@
-{"rustc":11719010198259268628,"features":"[]","target":4257383469639592577,"profile":13134100034870027236,"path":2131059958713712261,"deps":[],"local":[{"CheckDepInfo":{"dep_info":"riscv64imac-unknown-none-elf/debug/.fingerprint/scopeguard-64d25ff4a02191b0/dep-lib-scopeguard"}}],"rustflags":["-C","link-arg=-Tsrc/linker/linker.ld"],"metadata":8648443508444719667,"config":0}
