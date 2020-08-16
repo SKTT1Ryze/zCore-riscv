@@ -20,7 +20,7 @@ use core::{
     pin::Pin,
     task::{Context, Poll},
 };
-
+use crate::{print, println};
 use naive_timer::Timer;
 use spin::Mutex;
 use crate::kernel_hal::{

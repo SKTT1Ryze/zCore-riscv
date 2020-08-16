@@ -1,6 +1,7 @@
 use crate::zircon_object::signal::*;
 use crate::zircon_object::ZxError;
 use alloc::format;
+use crate::{print, println};
 
 pub fn test_port_packet_size() {
     use core::mem::size_of;

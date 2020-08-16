@@ -2,6 +2,8 @@ use crate::zircon_object::ipc::*;
 use crate::zircon_object::object::*;
 use alloc::sync::Arc;
 use alloc::{vec, vec::Vec};
+use crate::{print, println};
+
 pub fn test_test_basics_fifo() {
     let (end0, end1) = Fifo::create(10, 5);
     assert!(Arc::ptr_eq(

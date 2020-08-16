@@ -1,6 +1,8 @@
 use trapframe::{GeneralRegs,UserContext, TrapFrame};
 use riscv::register::{scause, stval};
 use riscv::register::scause::{Exception as E, Trap};
+use crate::{print, println};
+
 pub fn trapframe_test() {
     unsafe {
         trapframe::init();

@@ -5,6 +5,8 @@ pub mod job_test;
 pub mod job_policy_test;
 pub mod exception_test;
 
+use crate::{print, println};
+
 use {
     thread_test::*,
     process_test::*,

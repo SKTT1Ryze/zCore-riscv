@@ -1,5 +1,6 @@
 use crate::zircon_object::ipc::*;
 use crate::zircon_object::object::*;
+use crate::{print, println};
 
 const SOCKET_SIZE: usize = 128 * 2048;
 

@@ -1,6 +1,8 @@
 use crate::zircon_object::signal::*;
 use crate::zircon_object::object::*;
 use alloc::sync::Arc;
+use crate::{print, println};
+
 pub fn test_allowed_signals_2() {
     let (event0, event1) = EventPair::create();
     assert!(Signal::verify_user_signal(

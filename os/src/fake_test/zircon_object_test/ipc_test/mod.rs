@@ -1,6 +1,7 @@
 pub mod channel_test;
 pub mod fifo_test;
 pub mod socket_test;
+use crate::{print, println};
 
 use {
     channel_test::*,

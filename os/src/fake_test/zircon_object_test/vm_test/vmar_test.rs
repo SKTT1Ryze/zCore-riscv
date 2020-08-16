@@ -2,9 +2,10 @@ use crate::zircon_object::vm::*;
 use crate::zircon_object::ZxError;
 use alloc::sync::Arc;
 
+use crate::{print, println};
+
 /// A valid virtual address base to mmap.
 const MAGIC: usize = 0xdead_beaf;
-
 
 struct Sample {
     root: Arc<VmAddressRegion>,

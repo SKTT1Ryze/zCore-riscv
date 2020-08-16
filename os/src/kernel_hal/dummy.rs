@@ -7,7 +7,7 @@ use core::future::Future;
 use core::ops::FnOnce;
 use core::pin::Pin;
 use core::time::Duration;
-
+use crate::{print, println};
 use crate::fake_test::hal_frame_alloc;
 
 type ThreadId = usize;

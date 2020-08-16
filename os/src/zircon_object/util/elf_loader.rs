@@ -1,4 +1,4 @@
-use super::{error::*, vm::*};
+use crate::zircon_object::{error::*, vm::*};
 use alloc::sync::Arc;
 use xmas_elf::{
     program::{Flags, ProgramHeader, SegmentData, Type},

@@ -4,6 +4,7 @@ use crate::kernel_hal_bare::{
 };
 use crate::kernel_hal::defs::*;
 use alloc::vec::Vec;
+use crate::{print, println};
 
 pub fn pmem_test() {
     let paddr: PhysAddr = 0x80220000;

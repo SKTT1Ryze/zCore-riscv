@@ -1,6 +1,7 @@
 use crate::kernel_hal_bare::PageTableImpl;
 use crate::kernel_hal::defs::*;
 use crate::kernel_hal::PageTableTrait;
+use crate::{print, println};
 
 pub fn page_table_test() {
     let mut new_page_table = PageTableImpl::new();

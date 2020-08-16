@@ -1,5 +1,6 @@
 use crate::zircon_object::object::*;
 use alloc::sync::Arc;
+use crate::{print, println};
 
 pub fn test_ojb_type_unknown() {
     let obj: Arc<dyn KernelObject> = DummyObject::new();

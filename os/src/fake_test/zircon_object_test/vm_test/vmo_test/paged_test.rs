@@ -1,4 +1,5 @@
 use crate::zircon_object::vm::*;
+use crate::{print, println};
 
 pub fn test_read_write_paged() {
     let vmo = VmObject::new_paged(2);

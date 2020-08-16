@@ -10,6 +10,8 @@ use {
     right_test::*,
     signal_test::*,
 };
+use crate::{print, println};
+
 pub fn test_trait_with_dummy() {
     let dummy = DummyObject::new();
     assert_eq!(dummy.name(), String::from(""));

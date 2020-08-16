@@ -1,4 +1,6 @@
 use crate::zircon_object::util::block_range::*;
+use crate::{print, println};
+
 pub fn test_block_iter() {
     let mut iter = BlockIter {
         begin: 0x123,

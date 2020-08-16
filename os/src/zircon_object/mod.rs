@@ -13,3 +13,5 @@ pub mod dev;
 
 mod error;
 pub use self::error::*;
+
+pub use kcounter;

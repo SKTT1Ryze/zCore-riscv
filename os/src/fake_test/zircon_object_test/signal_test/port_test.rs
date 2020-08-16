@@ -1,5 +1,7 @@
 use crate::zircon_object::signal::*;
 use crate::zircon_object::ZxError;
+use crate::{print, println};
+
 pub fn test_port_new() {
     assert!(Port::new(0).is_ok());
     assert!(Port::new(1).is_ok());

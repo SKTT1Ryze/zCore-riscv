@@ -16,9 +16,10 @@
 #![feature(range_is_empty)]
 #![feature(new_uninit)]
 #![feature(const_in_array_repeat_expressions)]
+#![feature(lang_items)]
 
-#[macro_use]
-mod console;
+/* #[macro_use]
+mod console; */
 mod panic;
 mod sbi;
 mod zircon_object;
@@ -26,6 +27,12 @@ mod memory;
 mod kernel_hal;
 mod kernel_hal_bare;
 mod fake_test;
+mod zircon_syscall;
+mod zircon_loader;
+//mod lang;
+
+#[macro_use]
+mod logging;
 
 extern crate alloc;
 

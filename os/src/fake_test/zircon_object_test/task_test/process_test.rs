@@ -1,6 +1,7 @@
 use crate::zircon_object::task::*;
 use crate::zircon_object::object::*;
 use alloc::sync::Arc;
+use crate::{print, println};
 
 pub fn test_create_process() {
     let root_job = Job::root();

@@ -2,6 +2,7 @@ use crate::zircon_object::task::*;
 use crate::zircon_object::ZxError;
 use crate::zircon_object::object::KernelObject;
 use alloc::sync::Arc;
+use crate::{print, println};
 
 pub fn test_create_job() {
     let root_job = Job::root();

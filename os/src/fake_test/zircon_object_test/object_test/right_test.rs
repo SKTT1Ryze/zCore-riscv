@@ -1,4 +1,5 @@
 use crate::zircon_object::object::*;
+use crate::{print, println};
 
 pub fn test_try_from() {
     assert_eq!(Err(ZxError::INVALID_ARGS), Rights::try_from_test(0xffff_ffff));

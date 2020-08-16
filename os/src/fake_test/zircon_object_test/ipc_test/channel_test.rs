@@ -2,6 +2,8 @@ use crate::zircon_object::ipc::*;
 use crate::zircon_object::object::*;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
+use crate::{print, println};
+
 pub fn test_basics_channel() {
     let (end0, end1) = Channel::create();
     assert!(Arc::ptr_eq(

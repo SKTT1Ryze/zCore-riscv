@@ -1,5 +1,7 @@
 use alloc::vec::Vec;
 use crate::kernel_hal::fill_random;
+use crate::{print, println};
+
 pub fn fill_random_test() {
     println!("test fill_random");
     let mut buffer = Vec::new();

@@ -1,4 +1,5 @@
 use crate::zircon_object::task::*;
+use crate::{print, println};
 
 pub fn test_create_thread() {
     let root_job = Job::root();

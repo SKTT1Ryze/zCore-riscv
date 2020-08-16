@@ -4,6 +4,7 @@ pub mod futex_test;
 pub mod port_test;
 pub mod port_packet_test;
 pub mod timer_test;
+use crate::{print, println};
 
 pub use {
     event_test::*,

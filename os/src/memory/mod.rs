@@ -5,6 +5,7 @@ pub use {
     config::*,
     heap::*,
 };
+use crate::{print, println};
 pub fn init() {
     heap::init();
     // 允许内核读写用户态内存

@@ -1,3 +1,5 @@
+use crate::{print, println};
+
 pub fn alloc_test() {
     use alloc::boxed::Box;
     use alloc::vec::Vec;

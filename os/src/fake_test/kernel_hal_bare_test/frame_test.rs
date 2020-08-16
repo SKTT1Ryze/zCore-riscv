@@ -1,5 +1,7 @@
 use crate::kernel_hal_bare::Frame;
 use alloc::vec::Vec;
+use crate::{print, println};
+
 pub fn frame_test() {
     let mut frame_vec = Vec::new();
     for _ in 0..10 {

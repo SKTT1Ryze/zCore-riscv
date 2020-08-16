@@ -1,4 +1,5 @@
 use crate::zircon_object::object::*;
+use crate::{print, println};
 
 pub fn test_verify_user_signal() {
     assert_eq!(

@@ -3,10 +3,12 @@
 use core::panic::PanicInfo;
 use crate::sbi::shutdown;
 
+use crate::println;
 ///
 /// ### `#[panic_handler]` 属性
 #[panic_handler]
 fn panic_handler(info: &PanicInfo) -> ! {
+    
     // `\x1b[??m` 是控制终端字符输出格式的指令，在支持的平台上可以改变文字颜色等等
     // 这里使用错误红
     // 需要全局开启 feature(panic_info_message) 才可以调用 .message() 函数

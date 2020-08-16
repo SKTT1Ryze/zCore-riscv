@@ -2,6 +2,8 @@ pub mod vmo_test;
 pub mod stream_test;
 pub mod vmar_test;
 
+use crate::{print, println};
+
 use {
     vmo_test::*,
     stream_test::*,
