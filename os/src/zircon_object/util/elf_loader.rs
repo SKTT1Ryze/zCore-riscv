@@ -74,8 +74,8 @@ fn make_vmo(elf: &ElfFile, ph: ProgramHeader) -> ZxResult<Arc<VmObject>> {
         SegmentData::Undefined(data) => data,
         _ => return Err(ZxError::INVALID_ARGS),
     };
-    println!("wmo.write() need to be done at src/zircon_object/util/elf_loader.rs make_vmo");
-    //vmo.write(page_offset, data)?;
+    //println!("wmo.write() need to be done at src/zircon_object/util/elf_loader.rs make_vmo");
+    vmo.write(page_offset, data)?;
     Ok(vmo)
 }
 

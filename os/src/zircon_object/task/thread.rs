@@ -18,8 +18,8 @@ use {
 };
 
 use riscv::register::sstatus::{self, FS, SPP::*};
-
 use bit::BitIndex;
+use crate::println;
 
 pub use self::thread_state::*;
 
@@ -251,7 +251,33 @@ impl Thread {
                     },
                     _ => unreachable!(),
                 }
-                
+                match sstatus::read().xs() {
+                    FS::Off => {
+                        context.sstatus.set_bit(15, false);
+                        context.sstatus.set_bit(16, false);
+                        context.sstatus.set_bit(17, false);
+                    },
+                    FS::Initial => {
+                        context.sstatus.set_bit(13, true);
+                        context.sstatus.set_bit(14, false);
+                        context.sstatus.set_bit(15, false);
+                    },
+                    FS::Clean => {
+                        context.sstatus.set_bit(13, false);
+                        context.sstatus.set_bit(14, true);
+                        context.sstatus.set_bit(15, false);
+                    },
+                    FS::Dirty => {
+                        context.sstatus.set_bit(13, true);
+                        context.sstatus.set_bit(14, true);
+                        context.sstatus.set_bit(15, false);
+                    },
+                    _ => unreachable!(),
+                }
+                context.sstatus.set_bit(18, sstatus::read().sum());
+                context.sstatus.set_bit(19, sstatus::read().mxr());
+                context.sstatus.set_bit(8, true);
+                context.sstatus.set_bit(5, true);
             }
             inner.state = ThreadState::Running;
             self.base.signal_set(Signal::THREAD_RUNNING);
