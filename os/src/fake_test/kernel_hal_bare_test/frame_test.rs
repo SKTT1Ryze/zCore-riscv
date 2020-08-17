@@ -22,7 +22,7 @@ pub fn frame_test() {
     println!("frame_test pass");
 }
 
-#[no_mangle]
+/* #[no_mangle]
 pub extern "C" fn hal_frame_alloc() -> Option<usize> {
     println!("running in hal_frame_alloc()");
     Some(0)
@@ -32,4 +32,4 @@ pub extern "C" fn hal_frame_alloc() -> Option<usize> {
 pub extern "C" fn hal_frame_dealloc() -> Option<usize> {
     println!("running in hal_frame_dealloc()");
     Some(1)
-}
+} */

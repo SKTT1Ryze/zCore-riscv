@@ -29,6 +29,18 @@ impl PageTableImpl {
         }
     }
 
+    pub fn fake_new() -> PhysAddr {
+        let root_frame = Frame::alloc().expect("failed to alloc frame");
+        let root_vaddr = phys_to_virt(root_frame.paddr);
+        let root = unsafe { &mut *(root_vaddr as *mut PageTable) };
+        //root.zero();
+        let current =
+            phys_to_virt(satp::read().frame().start_address().as_usize()) as *const PageTable;
+        map_kernel(root_vaddr as _, current as _);
+        trace!("create page table @ {:#x}", root_frame.paddr);
+        root_frame.paddr
+    }
+
     #[cfg(target_arch = "riscv32")]
     fn get(&mut self) -> Rv32PageTable<'_> {
         let root_vaddr = phys_to_virt(self.root_paddr);

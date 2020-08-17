@@ -164,6 +164,60 @@ pub fn run_userboot(images: &Images<impl AsRef<[u8]>>, cmdline: &str) -> Arc<Pro
     proc
 }
 
+pub fn just_run_userboot(images: &Images<impl AsRef<[u8]>>, cmdline: &str) -> Arc<Process> {
+    let job = Job::root();
+    let proc = Process::create(&job, "userboot", 0).unwrap();
+    let thread = Thread::create(&proc, "userboot", 0).unwrap();
+    let resource = Resource::create(
+        "root",
+        ResourceKind::ROOT,
+        0,
+        0x1_0000_0000,
+        ResourceFlags::empty(),
+    );
+    let vmar = proc.vmar();
+    // userboot
+    let (entry, userboot_size) = {
+        let elf = ElfFile::new(images.userboot.as_ref()).unwrap();
+        let size = elf.load_segment_size();
+        let vmar = vmar
+            .allocate(None, size, VmarFlags::CAN_MAP_RXW, PAGE_SIZE)
+            .unwrap();
+        vmar.load_from_elf(&elf).unwrap();
+        (vmar.addr() + elf.header.pt2.entry_point() as usize, size)
+    };
+    // stack
+    const STACK_PAGES: usize = 8;
+    let stack_vmo = VmObject::new_paged(STACK_PAGES);
+    let flags = MMUFlags::READ | MMUFlags::WRITE | MMUFlags::USER;
+    let stack_bottom = vmar
+        .map(None, stack_vmo.clone(), 0, stack_vmo.len(), flags)
+        .unwrap();
+    #[cfg(target_arch = "x86_64")]
+    // WARN: align stack to 16B, then emulate a 'call' (push rip)
+    let sp = stack_bottom + stack_vmo.len() - 8;
+    #[cfg(target_arch = "aarch64")]
+    let sp = stack_bottom + stack_vmo.len();
+    #[cfg(any(target_arch = "riscv32", target_arch = "riscv64"))]
+    let sp = stack_bottom + stack_vmo.len();
+
+    // channel
+    let (user_channel, kernel_channel) = Channel::create();
+    let handle = Handle::new(user_channel, Rights::DEFAULT_CHANNEL);
+
+    let mut handles = vec![Handle::new(proc.clone(), Rights::empty()); K_HANDLECOUNT];
+
+    // check: handle to root proc should be only
+
+    let data = Vec::from(cmdline.replace(':', "\0") + "\0");
+    let msg = MessagePacket { data, handles };
+    kernel_channel.write(msg).unwrap();
+
+    proc.start(&thread, entry, sp, Some(handle), 0, spawn)
+        .expect("failed to start main thread");
+    proc
+}
+
 crate::kcounter!(EXCEPTIONS_USER, "exceptions.user");
 crate::kcounter!(EXCEPTIONS_TIMER, "exceptions.timer");
 crate::kcounter!(EXCEPTIONS_PGFAULT, "exceptions.pgfault");
@@ -204,11 +258,11 @@ fn spawn(thread: Arc<Thread>) {
             match cx.sstatus {
                 0 => {
                     println!("unimplemented in src/zircon_loader/mod.rs spawn");
-                    unimplemented!()
+                    unimplemented!();
                 }
                 _ => {
                     println!("unimplemented in src/zircon_loader/mod.rs spawn");
-                    unimplemented!()
+                    unimplemented!();
                 }
             }
             #[cfg(target_arch = "x86_64")]

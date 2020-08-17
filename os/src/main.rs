@@ -42,6 +42,8 @@ extern crate log;
 #[macro_use]
 extern crate lazy_static;
 
+
+
 use fake_test::{
     trapframe_test,
     alloc_test,
@@ -56,14 +58,14 @@ use fake_test::{
     zircon_object_test::vm_test::test_all_in_vm_test,
 };
 
-
+use crate::zircon_loader::{just_run_userboot, Images};
 
 //entry
 global_asm!(include_str!("asm/entry.asm"));
 
 // the first function to be called after _start
 #[no_mangle]
-pub extern "C" fn rust_main() -> ! {
+pub extern "C" fn rust_main(ramfs_data: &[u8], cmdline: &str) -> ! {
     println!("Welcome to zCore on riscv64");
     memory::init();
     alloc_test();
@@ -77,6 +79,22 @@ pub extern "C" fn rust_main() -> ! {
     test_all_in_task_test();
     test_all_in_ipc_test();
     //test_all_in_vm_test();
-    panic!("Panic at the end...")
+    let images = Images::<&[u8]> {
+        userboot: include_bytes!("./hello_world"),
+        vdso: include_bytes!("./hello_world"),
+        zbi: ramfs_data,
+    };
+    let _proc = just_run_userboot(&images, cmdline);
+    run();
+    unreachable!();
 }
 
+fn run() -> ! {
+    let mut counter = 0;
+    loop {
+        counter += 1;
+        if counter%1000 == 0 {
+            println!("fake timer tick");
+        }
+    }
+}

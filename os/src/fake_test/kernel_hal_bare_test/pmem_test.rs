@@ -21,6 +21,3 @@ pub fn pmem_test() {
     println!("test pmem");
 }
 
-const PHYSICAL_MEMORY_OFFSET: usize = 0xffff8000_00000000;
-#[export_name = "hal_pmem_base"]
-static PMEM_BASE: usize = PHYSICAL_MEMORY_OFFSET;

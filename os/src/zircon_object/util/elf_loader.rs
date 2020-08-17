@@ -6,7 +6,7 @@ use xmas_elf::{
     symbol_table::{DynEntry64, Entry},
     ElfFile,
 };
-
+use crate::println;
 pub trait VmarExt {
     fn load_from_elf(&self, elf: &ElfFile) -> ZxResult<Arc<VmObject>>;
     fn map_from_elf(&self, elf: &ElfFile, vmo: Arc<VmObject>) -> ZxResult;
@@ -74,7 +74,8 @@ fn make_vmo(elf: &ElfFile, ph: ProgramHeader) -> ZxResult<Arc<VmObject>> {
         SegmentData::Undefined(data) => data,
         _ => return Err(ZxError::INVALID_ARGS),
     };
-    vmo.write(page_offset, data)?;
+    println!("wmo.write() need to be done at src/zircon_object/util/elf_loader.rs make_vmo");
+    //vmo.write(page_offset, data)?;
     Ok(vmo)
 }
 

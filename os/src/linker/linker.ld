@@ -26,9 +26,11 @@ SECTIONS
     }
 
     .data : {
-        sdata = .;
+        PROVIDE_HIDDEN(kcounter_descriptor_begin = .);
+        KEEP(*(.kcounter.descriptor))
+        PROVIDE_HIDDEN(kcounter_descriptor_end = .);
+
         *(.data .data.*)
-        edata = .;
     }
 
     .stack : {
@@ -36,9 +38,11 @@ SECTIONS
     }
 
     .bss : {
-        sbss = .;
+        PROVIDE_HIDDEN(kcounters_arena_start = .);
+	    KEEP(*(.kcounter.items))
+	    PROVIDE_HIDDEN(kcounters_arena_end = .);
+
         *(.bss .bss.*)
-        ebss = .;
     }
 
     PROVIDE(end = .);

@@ -8,7 +8,11 @@ use core::ops::FnOnce;
 use core::pin::Pin;
 use core::time::Duration;
 use crate::{print, println};
-use crate::fake_test::hal_frame_alloc;
+use crate::memory::heap_x::*;
+
+use crate::kernel_hal_bare::{
+    PageTableImpl,
+};
 
 type ThreadId = usize;
 
@@ -125,8 +129,11 @@ impl PageTable {
     #[linkage = "weak"]
     #[export_name = "hal_pt_new_unimplemented"]
     pub fn new() -> Self {
-        println!("unimplemented in src/kernel_hal/dummy.rs impl PageTable new()");
-        unimplemented!()
+        /* println!("unimplemented in src/kernel_hal/dummy.rs impl PageTable new()");
+        unimplemented!() */
+        Self {
+            table_phys: PageTableImpl::fake_new()
+        }
     }
 }
 
@@ -180,8 +187,20 @@ impl PhysFrame {
     #[linkage = "weak"]
     #[export_name = "hal_frame_alloc_unimplemented"]
     pub extern "C" fn alloc() -> Option<Self> {
-        println!("unimplemented in src/kernel_hal/dummy.rs impl PhysFrame");
-        unimplemented!()
+        /* println!("unimplemented in src/kernel_hal/dummy.rs impl PhysFrame");
+        unimplemented!() */
+        match hal_frame_alloc() {
+            None => {
+                panic!("src/kernel_hal/dummy.rs impl PhyFrame: hal_frame_alloc() return None")
+            },
+            Some(paddr) => {
+                Some(
+                    Self {
+                        paddr
+                    }
+                )
+            },
+        }
     }
 
     #[linkage = "weak"]
@@ -208,8 +227,9 @@ impl PhysFrame {
     #[linkage = "weak"]
     #[export_name = "hal_zero_frame_paddr_unimplemented"]
     pub fn zero_frame_addr() -> PhysAddr {
-        println!("unimplemented in src/kernel_hal/dummy.rs impl PhysFrame");
-        unimplemented!()
+        crate::kernel_hal_bare::Frame::zero_frame_addr()
+        /* println!("unimplemented in src/kernel_hal/dummy.rs impl PhysFrame");
+        unimplemented!() */
     }
 }
 
@@ -250,8 +270,9 @@ pub fn frame_copy(_src: PhysAddr, _target: PhysAddr) {
 #[linkage = "weak"]
 #[export_name = "hal_frame_zero_unimplemented"]
 pub fn frame_zero_in_range(_target: PhysAddr, _start: usize, _end: usize) {
-    println!("unimplemented in src/kernel_hal/dummy.rs frame_zero_in_range");
-    unimplemented!()
+    /* println!("unimplemented in src/kernel_hal/dummy.rs frame_zero_in_range");
+    unimplemented!() */
+    crate::kernel_hal_bare::frame_zero_in_range(_target, _start, _end);
 }
 
 /// Flush the physical frame.

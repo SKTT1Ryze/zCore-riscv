@@ -42,7 +42,8 @@ pub fn page_table_test() {
     println!("page table test pass");
 }
 
-#[no_mangle]
+/* #[no_mangle]
 pub extern "C" fn hal_pt_map_kernel(pt: &mut u8, current: *const u8) {
-    println!("running hal_pt_map_kernel with pt: {} and current: {:?}", pt, current);
-}
+    //println!("running hal_pt_map_kernel with pt: {} and current: {:?}", pt, current);
+    println!("running hal_pt_map_kernel");
+} */
