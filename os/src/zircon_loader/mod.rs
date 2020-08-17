@@ -218,6 +218,18 @@ pub fn just_run_userboot(images: &Images<impl AsRef<[u8]>>, cmdline: &str) -> Ar
     proc
 }
 
+pub fn simple_run_userboot(images: &Images<impl AsRef<[u8]>>, cmdline: &str) -> Arc<Process> {
+    let job = Job::root();
+    let proc = Process::create(&job, "userboot", 0).unwrap();
+    let thread = Thread::create(&proc, "userboot", 0).unwrap();
+    let elf = ElfFile::new(images.userboot.as_ref()).unwrap();
+    let entry =elf.header.pt2.entry_point() as usize;
+    let sp: usize = 0x1_0000_0000;
+    proc.start(&thread, entry, sp, None, 0, spawn)
+        .expect("failed to start main thread");
+    proc
+}
+
 crate::kcounter!(EXCEPTIONS_USER, "exceptions.user");
 crate::kcounter!(EXCEPTIONS_TIMER, "exceptions.timer");
 crate::kcounter!(EXCEPTIONS_PGFAULT, "exceptions.pgfault");

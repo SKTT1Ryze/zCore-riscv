@@ -42,6 +42,7 @@ extern crate log;
 #[macro_use]
 extern crate lazy_static;
 
+extern crate bit;
 
 
 use fake_test::{
@@ -58,7 +59,7 @@ use fake_test::{
     zircon_object_test::vm_test::test_all_in_vm_test,
 };
 
-use crate::zircon_loader::{just_run_userboot, Images};
+use crate::zircon_loader::{simple_run_userboot, just_run_userboot, run_userboot, Images};
 
 //entry
 global_asm!(include_str!("asm/entry.asm"));
@@ -84,7 +85,8 @@ pub extern "C" fn rust_main(ramfs_data: &[u8], cmdline: &str) -> ! {
         vdso: include_bytes!("./hello_world"),
         zbi: ramfs_data,
     };
-    let _proc = just_run_userboot(&images, cmdline);
+    //let _proc = just_run_userboot(&images, cmdline);
+    let _proc = simple_run_userboot(&images, cmdline);
     run();
     unreachable!();
 }
@@ -94,7 +96,7 @@ fn run() -> ! {
     loop {
         counter += 1;
         if counter%1000 == 0 {
-            println!("fake timer tick");
+            //println!("fake timer tick");
         }
     }
 }

@@ -52,7 +52,9 @@ impl Thread {
             thread: thread
         }
     }
-
+    pub fn get_thread(&self) -> usize {
+        self.thread
+    }
     #[export_name = "hal_thread_spawn"]
     pub fn spawn(
         future: Pin<Box<dyn Future<Output = ()> + Send + 'static>>,

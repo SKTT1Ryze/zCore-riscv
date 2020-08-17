@@ -29,8 +29,11 @@ impl Thread {
         _future: Pin<Box<dyn Future<Output = ()> + Send + 'static>>,
         _vmtoken: usize,
     ) -> Self {
-        println!("unimplemented in src/kernel_hal/dummy.rs impl Thread");
-        unimplemented!()
+        Self {
+            id: crate::kernel_hal_bare::Thread::spawn(_future, _vmtoken).get_thread()
+        }
+        /* println!("unimplemented in src/kernel_hal/dummy.rs impl Thread");
+        unimplemented!() */
     }
 
     /// Set tid and pid of current task.

@@ -17,6 +17,10 @@ use {
     spin::Mutex,
 };
 
+use riscv::register::sstatus::{self, FS, SPP::*};
+
+use bit::BitIndex;
+
 pub use self::thread_state::*;
 
 mod thread_state;
@@ -207,6 +211,47 @@ impl Thread {
                 context.sp = stack;
                 context.general.x0 = arg1;
                 context.general.x1 = arg2;
+            }
+            #[cfg(any(target_arch = "riscv32", target_arch = "riscv64"))]
+            {
+                context.sepc = entry;
+                context.set_sp(stack);
+                context.sstatus.set_bit(0, sstatus::read().uie());
+                context.sstatus.set_bit(1, sstatus::read().sie());
+                context.sstatus.set_bit(4, sstatus::read().upie());
+                context.sstatus.set_bit(5, sstatus::read().spie());
+                match sstatus::read().spp() {
+                    Supervisor => {
+                        context.sstatus.set_bit(8, true);
+                    },
+                    User => {
+                        context.sstatus.set_bit(8, false);
+                    }
+                }
+                match sstatus::read().fs() {
+                    FS::Off => {
+                        context.sstatus.set_bit(13, false);
+                        context.sstatus.set_bit(14, false);
+                        context.sstatus.set_bit(15, false);
+                    },
+                    FS::Initial => {
+                        context.sstatus.set_bit(13, true);
+                        context.sstatus.set_bit(14, false);
+                        context.sstatus.set_bit(15, false);
+                    },
+                    FS::Clean => {
+                        context.sstatus.set_bit(13, false);
+                        context.sstatus.set_bit(14, true);
+                        context.sstatus.set_bit(15, false);
+                    },
+                    FS::Dirty => {
+                        context.sstatus.set_bit(13, true);
+                        context.sstatus.set_bit(14, true);
+                        context.sstatus.set_bit(15, false);
+                    },
+                    _ => unreachable!(),
+                }
+                
             }
             inner.state = ThreadState::Running;
             self.base.signal_set(Signal::THREAD_RUNNING);
