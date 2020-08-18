@@ -32,8 +32,21 @@ run zCore on qemu of riscv64
 + 利用 loader 层底下的实现暂时先重写一个简陋的 zircon-loader，先让整个框架能跑在 loader 层以上，能在上层环境输出，以达到验证底层代码正确性的效果
 + 参照 rCore-Tutorial，整个重写 zircon-loader，不执着于跑 Fuchsia 用户程序的思路，而是跑自己用 Rust 写的用户程序
 
+## 做了哪些：
++ 整个运行环境的搭建
++ 用 kernel-hal 中 unimplement 的函数中加上 kernel-hal-bare 中实现的函数链接，让代码转到 kernel-bare 中执行
++ 重写 memory 模块，实现了页帧分配器，并实现了 hal_frame_alloc，hal_frame_alloc_contiguous，hal_frame_dealloc 这三个在 kernel-hal 中定义但没有实现的函数，目前页帧分配已经可以正确使用。al_pt_map_kernel 函数还是 unimplement!
++ 将 print! 和 println! 宏从 console.rs 转到了 logging.rs，更好地对接原 zCore 的实现
++ 之前如果代码使用了 kcounter 相关的功能话，会报链接错误，现在修改了 linker.ld 文件使得代码可以正确链接
++ 在 thread.start 函数中原本没有在 riscv 平台下对 context 的处理，我这里为其加上了一些简单的实现，正确与否还得在后续的开发中观察和修改
++ 因为 no_std 环境里面实现单元测试十分麻烦，因此我写了一个 fake_test mod 用于代码测试
++ 为某些实现增加了一些共用的成员函数，以便我可以写测试代码
+
+
 ## 正在进行：
 再经过研究 zCore 源码和各种考虑之后，目前决定先简单重写一下 zircon-loader 层，具体来讲就是让重写的 loader 加载一个用 rustc 编译的面向 riscv 平台的 elf 文件，然后让进程去运行它，运行接口保留原来 zCore 的接口。实现方式将沿用 rCore-Tutorial 里面加载用户程序的方式。  
+但是上述功能的实现需要我理解 zCore 里面文件系统是怎么运作的，目前我对于着一块还是比较陌生。  
 同时这样做也是暂时放弃了和 Fuchsia 的对接，后续会如何发展目前还得不出结论。  
+往后要复习考试，可能进度会停滞一些了，在复习期间会抽时间给 zCore 加一点单元测试，同时也能使我更全面地理解 zCore。  
 
 
