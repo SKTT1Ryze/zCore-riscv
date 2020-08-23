@@ -29,6 +29,8 @@ mod kernel_hal_bare;
 mod fake_test;
 mod zircon_syscall;
 mod zircon_loader;
+mod linux_object;
+
 //mod lang;
 
 #[macro_use]
@@ -81,7 +83,7 @@ pub extern "C" fn rust_main(ramfs_data: &[u8], cmdline: &str) -> ! {
     test_all_in_ipc_test();
     //test_all_in_vm_test();
     let images = Images::<&[u8]> {
-        userboot: include_bytes!("./loop"),
+        userboot: include_bytes!("./hello"),
         vdso: include_bytes!("./hello_world"),
         zbi: ramfs_data,
     };
