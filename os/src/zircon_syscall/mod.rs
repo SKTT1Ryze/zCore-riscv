@@ -41,15 +41,15 @@ use {
     futures::pin_mut,
     crate::kernel_hal::{user::*, GeneralRegs},
     crate::zircon_object::object::*,
-    crate::zircon_object::task::Thread,
+    crate::zircon_object::task::{CurrentThread, ThreadFn},
 };
 
 use consts::SyscallType as Sys;
+
 pub struct Syscall<'a> {
     pub regs: &'a mut GeneralRegs,
-    pub thread: Arc<Thread>,
-    pub spawn_fn: fn(thread: Arc<Thread>),
-    pub exit: bool,
+    pub thread: &'a CurrentThread,
+    pub thread_fn: ThreadFn,
 }
 
 impl Syscall<'_> {
@@ -375,12 +375,6 @@ impl Syscall<'_> {
             }
         };
         info!("{}|{} {:?} <= {:?}", proc_name, thread_name, sys_type, ret);
-        if ret == Err(ZxError::STOP) && !self.exit {
-            // This is an error that only happens when the thread was killed during a blocking syscall
-            info!("{}|{}  KILLED WHEN BLOCKING", proc_name, thread_name);
-            self.thread.exit();
-            self.exit = true
-        }
         match ret {
             Ok(_) => 0,
             Err(err) => err as isize,

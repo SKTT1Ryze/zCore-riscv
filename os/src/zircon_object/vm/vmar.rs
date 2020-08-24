@@ -3,20 +3,36 @@ use {
     super::*, crate::zircon_object::object::*, alloc::sync::Arc, alloc::vec::Vec, bitflags::bitflags,
     crate::kernel_hal::PageTableTrait, spin::Mutex,
 };
-use crate::println;
+
 bitflags! {
+    /// Creation flags for VmAddressRegion.
     pub struct VmarFlags: u32 {
         #[allow(clippy::identity_op)]
+        /// When randomly allocating subregions, reduce sprawl by placing allocations
+        /// near each other.
         const COMPACT               = 1 << 0;
+        /// Request that the new region be at the specified offset in its parent region.
         const SPECIFIC              = 1 << 1;
+        /// Like SPECIFIC, but permits overwriting existing mappings.  This
+        /// flag will not overwrite through a subregion.
         const SPECIFIC_OVERWRITE    = 1 << 2;
+        /// Allow VmMappings to be created inside the new region with the SPECIFIC or
+        /// OFFSET_IS_UPPER_LIMIT flag.
         const CAN_MAP_SPECIFIC      = 1 << 3;
+        /// Allow VmMappings to be created inside the region with read permissions.
         const CAN_MAP_READ          = 1 << 4;
+        /// Allow VmMappings to be created inside the region with write permissions.
         const CAN_MAP_WRITE         = 1 << 5;
+        /// Allow VmMappings to be created inside the region with execute permissions.
         const CAN_MAP_EXECUTE       = 1 << 6;
+        /// Require that VMO backing the mapping is non-resizable.
         const REQUIRE_NON_RESIZABLE = 1 << 7;
+        /// Treat the offset as an upper limit when allocating a VMO or child VMAR.
         const ALLOW_FAULTS          = 1 << 8;
+
+        /// Allow VmMappings to be created inside the region with read, write and execute permissions.
         const CAN_MAP_RXW           = Self::CAN_MAP_READ.bits | Self::CAN_MAP_EXECUTE.bits | Self::CAN_MAP_WRITE.bits;
+        /// Creation flags for root VmAddressRegion
         const ROOT_FLAGS            = Self::CAN_MAP_RXW.bits | Self::CAN_MAP_SPECIFIC.bits;
     }
 }
@@ -59,7 +75,6 @@ impl VmAddressRegion {
             size: 0x100_00000000,
             parent: None,
             page_table: Arc::new(Mutex::new(crate::kernel_hal::PageTable::new())),
-            //page_table: Arc::new(Mutex::new(crate::kernel_hal_bare::PageTableImpl::new())),
             inner: Mutex::new(Some(VmarInner::default())),
         })
     }
@@ -133,6 +148,7 @@ impl VmAddressRegion {
         Ok(child)
     }
 
+    /// Map the `vmo` into this VMAR at given `offset`.
     pub fn map_at(
         &self,
         vmar_offset: usize,
@@ -167,6 +183,7 @@ impl VmAddressRegion {
         )
     }
 
+    /// Map the `vmo` into this VMAR.
     pub fn map(
         &self,
         vmar_offset: Option<usize>,
@@ -266,6 +283,9 @@ impl VmAddressRegion {
         Ok(())
     }
 
+    /// Change protections on a subset of the region of memory in the containing
+    /// address space.  If the requested range overlaps with a subregion,
+    /// protect() will fail.
     pub fn protect(&self, addr: usize, len: usize, flags: MMUFlags) -> ZxResult {
         let mut guard = self.inner.lock();
         let inner = guard.as_mut().ok_or(ZxError::BAD_STATE)?;
@@ -350,10 +370,12 @@ impl VmAddressRegion {
         self.addr
     }
 
+    /// Whether this VMAR is dead.
     pub fn is_dead(&self) -> bool {
         self.inner.lock().is_none()
     }
 
+    /// Whether this VMAR is alive.
     pub fn is_alive(&self) -> bool {
         !self.is_dead()
     }
@@ -440,6 +462,7 @@ impl VmAddressRegion {
         self.addr <= vaddr && vaddr < self.end_addr()
     }
 
+    /// Get information of this VmAddressRegion
     pub fn get_info(&self) -> VmarInfo {
         VmarInfo {
             base: self.addr(),
@@ -447,6 +470,7 @@ impl VmAddressRegion {
         }
     }
 
+    /// Get VmarFlags of this VMAR.
     pub fn get_flags(&self) -> VmarFlags {
         self.flags
     }
@@ -463,6 +487,7 @@ impl VmAddressRegion {
         }
     }
 
+    /// Get base address of vdso.
     pub fn vdso_base_addr(&self) -> Option<usize> {
         let guard = self.inner.lock();
         let inner = guard.as_ref().unwrap();
@@ -515,6 +540,7 @@ impl VmAddressRegion {
         inner.fork_from(src, &self.page_table)
     }
 
+    /// Returns statistics about memory used by a task.
     pub fn get_task_stats(&self) -> TaskStatsInfo {
         let mut task_stats = TaskStatsInfo::default();
         self.for_each_mapping(&mut |map| map.fill_in_task_status(&mut task_stats));
@@ -558,15 +584,15 @@ impl VmAddressRegion {
         None
     }
 
-    
-    pub fn count(&self) -> usize {
+    #[cfg(test)]
+    fn count(&self) -> usize {
         let mut guard = self.inner.lock();
         let inner = guard.as_mut().unwrap();
         inner.mappings.len() + inner.children.len()
     }
 
-    
-    pub fn used_size(&self) -> usize {
+    #[cfg(test)]
+    fn used_size(&self) -> usize {
         let mut guard = self.inner.lock();
         let inner = guard.as_mut().unwrap();
         let map_size: usize = inner.mappings.iter().map(|map| map.size()).sum();
@@ -596,6 +622,7 @@ impl VmarInner {
     }
 }
 
+/// Information of a VmAddressRegion.
 #[repr(C)]
 #[derive(Debug)]
 pub struct VmarInfo {
@@ -618,6 +645,7 @@ struct VmMappingInner {
     vmo_offset: usize,
 }
 
+/// Statistics about resources (e.g., memory) used by a task.
 #[repr(C)]
 #[derive(Default)]
 pub struct TaskStatsInfo {
@@ -808,6 +836,7 @@ impl VmMapping {
         self.inner.lock().end_addr()
     }
 
+    /// Get MMUFlags of this VmMapping.
     pub fn get_flags(&self) -> MMUFlags {
         self.flags
     }
@@ -832,7 +861,8 @@ impl VmMapping {
         }
     }
 
-    pub fn handle_page_fault(&self, vaddr: VirtAddr, flags: MMUFlags) -> ZxResult {
+    /// Handle page fault happened on this VmMapping.
+    pub(crate) fn handle_page_fault(&self, vaddr: VirtAddr, flags: MMUFlags) -> ZxResult {
         if !self.flags.contains(flags) {
             return Err(ZxError::ACCESS_DENIED);
         }

@@ -3,8 +3,8 @@ use crate::{print, println};
 
 pub fn test_create_thread() {
     let root_job = Job::root();
-    let proc = Process::create(&root_job, "proc", 0).expect("failed to create process");
-    let _thread = Thread::create(&proc, "thread", 0).expect("failed to create thread");
+    let proc = Process::create(&root_job, "proc").expect("failed to create process");
+    let _thread = Thread::create(&proc, "thread").expect("failed to create thread");
     println!("test_create_thread pass");
 }
 

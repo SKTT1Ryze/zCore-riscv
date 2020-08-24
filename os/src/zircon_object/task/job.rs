@@ -1,6 +1,12 @@
 use {
-    super::exception::*, super::job_policy::*, super::process::Process, super::object::*,
-    super::task::Task, alloc::sync::Arc, alloc::vec::Vec, spin::Mutex,
+    super::exception::*,
+    super::job_policy::*,
+    super::process::Process,
+    super::object::*,
+    super::task::Task,
+    alloc::sync::{Arc, Weak},
+    alloc::vec::Vec,
+    spin::Mutex,
 };
 
 /// Control a group of processes
@@ -37,8 +43,8 @@ pub struct Job {
 impl_kobject!(Job
     fn get_child(&self, id: KoID) -> ZxResult<Arc<dyn KernelObject>> {
         let inner = self.inner.lock();
-        if let Some(job) = inner.children.iter().find(|o| o.id() == id) {
-            return Ok(job.clone());
+        if let Some(job) = inner.children.iter().filter_map(|o|o.upgrade()).find(|o| o.id() == id) {
+            return Ok(job);
         }
         if let Some(proc) = inner.processes.iter().find(|o| o.id() == id) {
             return Ok(proc.clone());
@@ -54,17 +60,18 @@ define_count_helper!(Job);
 #[derive(Default)]
 struct JobInner {
     policy: JobPolicy,
-    children: Vec<Arc<Job>>,
+    children: Vec<Weak<Job>>,
     processes: Vec<Arc<Process>>,
     // if the job is killed, no more child creation should works
     killed: bool,
     timer_policy: TimerSlack,
+    self_ref: Weak<Job>,
 }
 
 impl Job {
     /// Create the root job.
     pub fn root() -> Arc<Self> {
-        Arc::new(Job {
+        let job = Arc::new(Job {
             base: KObjectBase::new(),
             _counter: CountHelper::new(),
             parent: None,
@@ -72,12 +79,13 @@ impl Job {
             exceptionate: Exceptionate::new(ExceptionChannelType::Job),
             debug_exceptionate: Exceptionate::new(ExceptionChannelType::JobDebugger),
             inner: Mutex::new(JobInner::default()),
-        })
+        });
+        job.inner.lock().self_ref = Arc::downgrade(&job);
+        job
     }
 
     /// Create a new child job object.
-    pub fn create_child(self: &Arc<Self>, _options: u32) -> ZxResult<Arc<Self>> {
-        // TODO: options
+    pub fn create_child(self: &Arc<Self>) -> ZxResult<Arc<Self>> {
         let mut inner = self.inner.lock();
         if inner.killed {
             return Err(ZxError::BAD_STATE);
@@ -91,8 +99,19 @@ impl Job {
             debug_exceptionate: Exceptionate::new(ExceptionChannelType::JobDebugger),
             inner: Mutex::new(JobInner::default()),
         });
-        inner.children.push(child.clone());
+        let child_weak = Arc::downgrade(&child);
+        child.inner.lock().self_ref = child_weak.clone();
+        inner.children.push(child_weak);
         Ok(child)
+    }
+
+    fn remove_child(&self, to_remove: &Weak<Job>) {
+        let mut inner = self.inner.lock();
+        inner.children.retain(|child| !to_remove.ptr_eq(child));
+        if inner.killed && inner.processes.is_empty() && inner.children.is_empty() {
+            drop(inner);
+            self.terminate()
+        }
     }
 
     /// Get the policy of the job.
@@ -112,12 +131,16 @@ impl Job {
     ///
     /// After this call succeeds any new child process or child job will have
     /// the new effective policy applied to it.
-    pub fn set_policy_basic(&self, options: SetPolicyOptions, policys: &[BasicPolicy]) -> ZxResult {
+    pub fn set_policy_basic(
+        &self,
+        options: SetPolicyOptions,
+        policies: &[BasicPolicy],
+    ) -> ZxResult {
         let mut inner = self.inner.lock();
         if !inner.is_empty() {
             return Err(ZxError::BAD_STATE);
         }
-        for policy in policys {
+        for policy in policies {
             if self.parent_policy.get_action(policy.condition).is_some() {
                 match options {
                     SetPolicyOptions::Absolute => return Err(ZxError::ALREADY_EXISTS),
@@ -130,6 +153,7 @@ impl Job {
         Ok(())
     }
 
+    /// Sets timer slack policy to an empty job.
     pub fn set_policy_timer_slack(&self, policy: TimerSlackPolicy) -> ZxResult {
         let mut inner = self.inner.lock();
         if !inner.is_empty() {
@@ -150,29 +174,28 @@ impl Job {
         Ok(())
     }
 
+    /// Remove a process from the job.
     pub(super) fn remove_process(&self, id: KoID) {
         let mut inner = self.inner.lock();
         inner.processes.retain(|proc| proc.id() != id);
+        if inner.killed && inner.processes.is_empty() && inner.children.is_empty() {
+            drop(inner);
+            self.terminate()
+        }
     }
 
+    /// Get information of this job.
     pub fn get_info(&self) -> JobInfo {
         JobInfo::default()
     }
 
+    /// Check whether this job is root job.
     pub fn check_root_job(&self) -> ZxResult {
         if self.parent.is_some() {
             Err(ZxError::ACCESS_DENIED)
         } else {
             Ok(())
         }
-    }
-
-    pub fn get_exceptionate(&self) -> Arc<Exceptionate> {
-        self.exceptionate.clone()
-    }
-
-    pub fn get_debug_exceptionate(&self) -> Arc<Exceptionate> {
-        self.debug_exceptionate.clone()
     }
 
     /// Get KoIDs of Processes.
@@ -182,32 +205,71 @@ impl Job {
 
     /// Get KoIDs of children Jobs.
     pub fn children_ids(&self) -> Vec<KoID> {
-        self.inner.lock().children.iter().map(|j| j.id()).collect()
+        self.inner
+            .lock()
+            .children
+            .iter()
+            .filter_map(|j| j.upgrade())
+            .map(|j| j.id())
+            .collect()
     }
 
+    /// Return true if this job has no processes and no child jobs.
     pub fn is_empty(&self) -> bool {
         self.inner.lock().is_empty()
     }
 
-    pub fn kill(&self) {
+    /// The job finally terminates.
+    fn terminate(&self) {
+        self.exceptionate.shutdown();
+        self.debug_exceptionate.shutdown();
+        self.base.signal_set(Signal::JOB_TERMINATED);
+        if let Some(parent) = self.parent.as_ref() {
+            parent.remove_child(&self.inner.lock().self_ref)
+        }
+    }
+}
+
+impl Task for Job {
+    /// Kill the job. The job do not terminate immediately when killed.
+    /// It will terminate after all its children and processes are terminated.
+    fn kill(&self) {
         let (children, processes) = {
             let mut inner = self.inner.lock();
             if inner.killed {
                 return;
             }
             inner.killed = true;
-            (
-                core::mem::take(&mut inner.children),
-                core::mem::take(&mut inner.processes),
-            )
+            (inner.children.clone(), inner.processes.clone())
         };
+        if children.is_empty() && processes.is_empty() {
+            self.terminate();
+            return;
+        }
         for child in children {
-            child.kill();
+            if let Some(child) = child.upgrade() {
+                child.kill();
+            }
         }
         for proc in processes {
             proc.kill();
         }
-        self.base.signal_set(Signal::JOB_TERMINATED);
+    }
+
+    fn suspend(&self) {
+        panic!("job do not support suspend");
+    }
+
+    fn resume(&self) {
+        panic!("job do not support resume");
+    }
+
+    fn exceptionate(&self) -> Arc<Exceptionate> {
+        self.exceptionate.clone()
+    }
+
+    fn debug_exceptionate(&self) -> Arc<Exceptionate> {
+        self.debug_exceptionate.clone()
     }
 }
 
@@ -217,6 +279,13 @@ impl JobInner {
     }
 }
 
+impl Drop for Job {
+    fn drop(&mut self) {
+        self.terminate();
+    }
+}
+
+/// Information of a job.
 #[repr(C)]
 #[derive(Default)]
 pub struct JobInfo {

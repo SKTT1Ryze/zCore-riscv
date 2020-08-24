@@ -1,7 +1,7 @@
 use {super::*, crate::zircon_object::ipc::Fifo};
 
-
 impl Syscall<'_> {
+    /// Creates a fifo, which is actually a pair of fifos of `elem_count` entries of `elem_size` bytes.
     pub fn sys_fifo_create(
         &self,
         elem_count: usize,
@@ -29,6 +29,7 @@ impl Syscall<'_> {
         Ok(())
     }
 
+    /// Write data to a fifo.
     pub fn sys_fifo_write(
         &self,
         handle_value: HandleValue,
@@ -52,6 +53,7 @@ impl Syscall<'_> {
         Ok(())
     }
 
+    /// Read data from a fifo.
     pub fn sys_fifo_read(
         &self,
         handle_value: HandleValue,

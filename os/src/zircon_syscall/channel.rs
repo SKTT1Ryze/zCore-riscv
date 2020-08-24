@@ -6,12 +6,11 @@ use {
         object::{obj_type, HandleInfo},
         task::ThreadState,
     },
-    alloc::format,
 };
 
 impl Syscall<'_> {
-    /// Read a message from a channel.
     #[allow(clippy::too_many_arguments)]
+    /// Read/Receive a message from a channel.  
     pub fn sys_channel_read(
         &self,
         handle_value: HandleValue,
@@ -75,7 +74,7 @@ impl Syscall<'_> {
         }
         Ok(())
     }
-
+    /// Write a message to a channel.  
     pub fn sys_channel_write(
         &self,
         handle_value: HandleValue,
@@ -115,7 +114,7 @@ impl Syscall<'_> {
         channel.write(MessagePacket { data, handles })?;
         Ok(())
     }
-
+    /// Create a new channel.   
     pub fn sys_channel_create(
         &self,
         options: u32,
@@ -135,6 +134,7 @@ impl Syscall<'_> {
         Ok(())
     }
 
+    ///   
     pub async fn sys_channel_call_noretry(
         &self,
         handle_value: HandleValue,
@@ -176,7 +176,7 @@ impl Syscall<'_> {
         pin_mut!(future);
         let rd_msg: MessagePacket = self
             .thread
-            .blocking_run(future, ThreadState::BlockedChannel, deadline.into())
+            .blocking_run(future, ThreadState::BlockedChannel, deadline.into(), None)
             .await?;
 
         actual_bytes.write(rd_msg.data.len() as u32)?;
@@ -211,7 +211,7 @@ impl Syscall<'_> {
             Err(ZxError::BAD_STATE)
         }
     }
-
+    /// Write a message to a channel.  
     pub fn sys_channel_write_etc(
         &self,
         handle: HandleValue,

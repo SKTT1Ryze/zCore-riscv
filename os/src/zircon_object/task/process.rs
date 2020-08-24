@@ -7,7 +7,7 @@ use {
     hashbrown::HashMap,
     spin::Mutex,
 };
-use crate::println;
+
 /// Process abstraction
 ///
 /// ## SYNOPSIS
@@ -86,10 +86,14 @@ struct ProcessInner {
     critical_to_job: Option<(Arc<Job>, bool)>,
 }
 
+/// Status of a process.
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum Status {
+    /// Initial state, no thread present in process.
     Init,
+    /// First thread has started and is running.
     Running,
+    /// Process has exited with the code.
     Exited(i64),
 }
 
@@ -101,7 +105,7 @@ impl Default for Status {
 
 impl Process {
     /// Create a new process in the `job`.
-    pub fn create(job: &Arc<Job>, name: &str, _options: u32) -> ZxResult<Arc<Self>> {
+    pub fn create(job: &Arc<Job>, name: &str) -> ZxResult<Arc<Self>> {
         Self::create_with_ext(job, name, ())
     }
 
@@ -111,7 +115,6 @@ impl Process {
         name: &str,
         ext: impl Any + Send + Sync,
     ) -> ZxResult<Arc<Self>> {
-        // TODO: _options -> options
         let proc = Arc::new(Process {
             base: KObjectBase::with_name(name),
             _counter: CountHelper::new(),
@@ -127,13 +130,40 @@ impl Process {
         Ok(proc)
     }
 
-    /// Start the first `thread` in the process.
+    /// Start the first thread in the process.
     ///
     /// This causes a thread to begin execution at the program
     /// counter specified by `entry` and with the stack pointer set to `stack`.
     /// The arguments `arg1` and `arg2` are arranged to be in the architecture
     /// specific registers used for the first two arguments of a function call
     /// before the thread is started. All other registers are zero upon start.
+    ///
+    /// # Example
+    /// ```
+    /// # use std::sync::Arc;
+    /// # use zircon_object::task::*;
+    /// # use zircon_object::object::*;
+    /// # kernel_hal_unix::init();
+    /// # async_std::task::block_on(async {
+    /// let job = Job::root();
+    /// let proc = Process::create(&job, "proc").unwrap();
+    /// let thread = Thread::create(&proc, "thread").unwrap();
+    /// let handle = Handle::new(proc.clone(), Rights::DEFAULT_PROCESS);
+    ///
+    /// // start the new thread
+    /// proc.start(&thread, 1, 4, Some(handle), 2, |thread| Box::pin(async move {
+    ///     let cx = thread.wait_for_run().await;
+    ///     assert_eq!(cx.general.rip, 1);  // entry
+    ///     assert_eq!(cx.general.rsp, 4);  // stack_top
+    ///     assert_eq!(cx.general.rdi, 3);  // arg0 (handle)
+    ///     assert_eq!(cx.general.rsi, 2);  // arg1
+    ///     thread.end_running(cx);
+    /// })).unwrap();
+    ///
+    /// # let object: Arc<dyn KernelObject> = thread.clone();
+    /// # object.wait_signal(Signal::THREAD_TERMINATED).await;
+    /// # });
+    /// ```
     pub fn start(
         &self,
         thread: &Arc<Thread>,
@@ -141,7 +171,7 @@ impl Process {
         stack: usize,
         arg1: Option<Handle>,
         arg2: usize,
-        spawn_fn: fn(thread: Arc<Thread>),
+        thread_fn: ThreadFn,
     ) -> ZxResult {
         let handle_value;
         {
@@ -155,7 +185,8 @@ impl Process {
             inner.status = Status::Running;
             handle_value = arg1.map_or(INVALID_HANDLE, |handle| inner.add_handle(handle));
         }
-        match thread.start(entry, stack, handle_value as usize, arg2, spawn_fn) {
+        thread.set_first_thread();
+        match thread.start(entry, stack, handle_value as usize, arg2, thread_fn) {
             Ok(_) => Ok(()),
             Err(err) => {
                 let mut inner = self.inner.lock();
@@ -168,19 +199,39 @@ impl Process {
     }
 
     /// Exit current process with `retcode`.
+    /// The process do not terminate immediately when exited.
+    /// It will terminate after all its child threads are terminated.
     pub fn exit(&self, retcode: i64) {
         let mut inner = self.inner.lock();
         if let Status::Exited(_) = inner.status {
             return;
         }
         inner.status = Status::Exited(retcode);
-        // TODO: exit all threads
-        self.base.signal_set(Signal::PROCESS_TERMINATED);
+        if inner.threads.is_empty() {
+            inner.handles.clear();
+            drop(inner);
+            self.terminate();
+            return;
+        }
         for thread in inner.threads.iter() {
             thread.kill();
         }
-        inner.threads.clear();
         inner.handles.clear();
+    }
+
+    /// The process finally terminates.
+    fn terminate(&self) {
+        let mut inner = self.inner.lock();
+        let retcode = match inner.status {
+            Status::Exited(retcode) => retcode,
+            _ => {
+                inner.status = Status::Exited(0);
+                0
+            }
+        };
+        self.base.signal_set(Signal::PROCESS_TERMINATED);
+        self.exceptionate.shutdown();
+        self.debug_exceptionate.shutdown();
 
         self.job.remove_process(self.base.id);
         // If we are critical to a job, we need to take action.
@@ -286,6 +337,7 @@ impl Process {
             .collect()
     }
 
+    /// Remove a handle referring to a kernel object of the given type from the process.
     pub fn remove_object<T: KernelObject>(&self, handle_value: HandleValue) -> ZxResult<Arc<T>> {
         let handle = self.remove_handle(handle_value)?;
         let object = handle
@@ -342,31 +394,24 @@ impl Process {
         handle_value: HandleValue,
         desired_rights: Rights,
     ) -> ZxResult<Arc<T>> {
-        let handle = self.get_handle(handle_value)?;
-        // check type before rights
-        let object = handle
-            .object
-            .downcast_arc::<T>()
-            .map_err(|_| ZxError::WRONG_TYPE)?;
-        if !handle.rights.contains(desired_rights) {
-            return Err(ZxError::ACCESS_DENIED);
-        }
-        Ok(object)
+        self.get_dyn_object_with_rights(handle_value, desired_rights)
+            .and_then(|obj| obj.downcast_arc::<T>().map_err(|_| ZxError::WRONG_TYPE))
     }
 
+    /// Get the kernel object corresponding to this `handle_value` and this handle's rights.
     pub fn get_object_and_rights<T: KernelObject>(
         &self,
         handle_value: HandleValue,
     ) -> ZxResult<(Arc<T>, Rights)> {
-        let handle = self.get_handle(handle_value)?;
-        // check type before rights
-        let object = handle
-            .object
+        let (object, rights) = self.get_dyn_object_and_rights(handle_value)?;
+        let object = object
             .downcast_arc::<T>()
             .map_err(|_| ZxError::WRONG_TYPE)?;
-        Ok((object, handle.rights))
+        Ok((object, rights))
     }
 
+    /// Get the kernel object corresponding to this `handle_value`,
+    /// after checking that this handle has the `desired_rights`.
     pub fn get_dyn_object_with_rights(
         &self,
         handle_value: HandleValue,
@@ -380,6 +425,7 @@ impl Process {
         Ok(handle.object)
     }
 
+    /// Get the kernel object corresponding to this `handle_value` and this handle's rights.
     pub fn get_dyn_object_and_rights(
         &self,
         handle_value: HandleValue,
@@ -398,6 +444,7 @@ impl Process {
         Ok(object)
     }
 
+    /// Get the handle's information corresponding to `handle_value`.
     pub fn get_handle_info(&self, handle_value: HandleValue) -> ZxResult<HandleBasicInfo> {
         let handle = self.get_handle(handle_value)?;
         Ok(handle.get_info())
@@ -413,7 +460,7 @@ impl Process {
         Ok(())
     }
 
-    /// Remove a thread to from process.
+    /// Remove a thread from the process.
     ///
     /// If no more threads left, exit the process.
     pub(super) fn remove_thread(&self, tid: KoID) {
@@ -421,14 +468,14 @@ impl Process {
         inner.threads.retain(|t| t.id() != tid);
         if inner.threads.is_empty() {
             drop(inner);
-            self.exit(0);
+            self.terminate();
         }
     }
 
+    /// Get information of this process.
     pub fn get_info(&self) -> ProcessInfo {
         let mut info = ProcessInfo::default();
-        // TODO correct debugger_attached setting
-        info.debugger_attached = false;
+        info.debugger_attached = self.debug_exceptionate.has_channel();
         match self.inner.lock().status {
             Status::Init => {
                 info.started = false;
@@ -441,50 +488,60 @@ impl Process {
             Status::Exited(ret) => {
                 info.return_code = ret;
                 info.has_exited = true;
-                info.started = false;
+                info.started = true;
             }
         }
         info
     }
 
+    /// Set the debug address.
     pub fn set_debug_addr(&self, addr: usize) {
         self.inner.lock().debug_addr = addr;
     }
 
+    /// Get the debug address.
     pub fn get_debug_addr(&self) -> usize {
         self.inner.lock().debug_addr
     }
 
+    /// Set the address where the dynamic loader will issue a debug trap on every load of a
+    /// shared library to. Setting this property to
+    /// zero will disable it.
     pub fn set_dyn_break_on_load(&self, addr: usize) {
         self.inner.lock().dyn_break_on_load = addr;
     }
 
+    /// Get the address where the dynamic loader will issue a debug trap on every load of a
+    /// shared library to.
     pub fn get_dyn_break_on_load(&self) -> usize {
         self.inner.lock().dyn_break_on_load
     }
 
+    /// Get an one-shot `Receiver` for receiving cancel message of the given handle.
     pub fn get_cancel_token(&self, handle_value: HandleValue) -> ZxResult<Receiver<()>> {
         self.inner.lock().get_cancel_token(handle_value)
-    }
-
-    pub fn get_exceptionate(&self) -> Arc<Exceptionate> {
-        self.exceptionate.clone()
-    }
-
-    pub fn get_debug_exceptionate(&self) -> Arc<Exceptionate> {
-        self.debug_exceptionate.clone()
     }
 
     /// Get KoIDs of Threads.
     pub fn thread_ids(&self) -> Vec<KoID> {
         self.inner.lock().threads.iter().map(|t| t.id()).collect()
     }
+
+    /// Wait for process exit and get return code.
+    pub async fn wait_for_exit(self: &Arc<Self>) -> i64 {
+        let object: Arc<dyn KernelObject> = self.clone();
+        object.wait_signal(Signal::PROCESS_TERMINATED).await;
+        if let Status::Exited(code) = self.status() {
+            code
+        } else {
+            unreachable!();
+        }
+    }
 }
 
 impl Task for Process {
     fn kill(&self) {
-        let retcode = TASK_RETCODE_SYSCALL_KILL;
-        self.exit(retcode);
+        self.exit(TASK_RETCODE_SYSCALL_KILL);
     }
 
     fn suspend(&self) {
@@ -499,6 +556,14 @@ impl Task for Process {
         for thread in inner.threads.iter() {
             thread.resume();
         }
+    }
+
+    fn exceptionate(&self) -> Arc<Exceptionate> {
+        self.exceptionate.clone()
+    }
+
+    fn debug_exceptionate(&self) -> Arc<Exceptionate> {
+        self.debug_exceptionate.clone()
     }
 }
 
@@ -545,6 +610,8 @@ impl ProcessInner {
     }
 }
 
+/// Information of a process.
+#[allow(missing_docs)]
 #[repr(C)]
 #[derive(Default)]
 pub struct ProcessInfo {

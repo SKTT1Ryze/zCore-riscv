@@ -1,16 +1,13 @@
-//! Zircon loader implementations
-
 use {
-    alloc::{boxed::Box, sync::Arc, vec::Vec, vec},
+    alloc::{boxed::Box, sync::Arc, vec::Vec},
+    core::{future::Future, pin::Pin},
     crate::kernel_hal::GeneralRegs,
     xmas_elf::ElfFile,
     crate::zircon_object::{dev::*, ipc::*, object::*, task::*, util::elf_loader::*, vm::*},
     crate::zircon_syscall::Syscall,
 };
-use crate::{print, println};
 
 mod kcounter;
-
 
 // These describe userboot itself
 const K_PROC_SELF: usize = 0;
@@ -36,8 +33,8 @@ pub struct Images<T: AsRef<[u8]>> {
 
 pub fn run_userboot(images: &Images<impl AsRef<[u8]>>, cmdline: &str) -> Arc<Process> {
     let job = Job::root();
-    let proc = Process::create(&job, "userboot", 0).unwrap();
-    let thread = Thread::create(&proc, "userboot", 0).unwrap();
+    let proc = Process::create(&job, "userboot").unwrap();
+    let thread = Thread::create(&proc, "userboot").unwrap();
     let resource = Resource::create(
         "root",
         ResourceKind::ROOT,
@@ -78,7 +75,7 @@ pub fn run_userboot(images: &Images<impl AsRef<[u8]>>, cmdline: &str) -> Arc<Pro
             let offset = elf
                 .get_symbol_address("zcore_syscall_entry")
                 .expect("failed to locate syscall entry") as usize;
-            let syscall_entry = &(crate::kernel_hal_unix::syscall_entry as usize).to_ne_bytes();
+            let syscall_entry = &(kernel_hal_unix::syscall_entry as usize).to_ne_bytes();
             // fill syscall entry x3
             vdso_vmo.write(offset, syscall_entry).unwrap();
             vdso_vmo.write(offset + 8, syscall_entry).unwrap();
@@ -108,8 +105,7 @@ pub fn run_userboot(images: &Images<impl AsRef<[u8]>>, cmdline: &str) -> Arc<Pro
     #[cfg(target_arch = "aarch64")]
     let sp = stack_bottom + stack_vmo.len();
     #[cfg(any(target_arch = "riscv32", target_arch = "riscv64"))]
-    let sp = stack_bottom + stack_vmo.len();
-
+    let sp = stack_bottom + stack_vmo.len() - 8;
     // channel
     let (user_channel, kernel_channel) = Channel::create();
     let handle = Handle::new(user_channel, Rights::DEFAULT_CHANNEL);
@@ -159,216 +155,116 @@ pub fn run_userboot(images: &Images<impl AsRef<[u8]>>, cmdline: &str) -> Arc<Pro
     let msg = MessagePacket { data, handles };
     kernel_channel.write(msg).unwrap();
 
-    proc.start(&thread, entry, sp, Some(handle), 0, spawn)
+    proc.start(&thread, entry, sp, Some(handle), 0, thread_fn)
         .expect("failed to start main thread");
     proc
 }
 
-pub fn just_run_userboot(images: &Images<impl AsRef<[u8]>>, cmdline: &str) -> Arc<Process> {
-    let job = Job::root();
-    let proc = Process::create(&job, "userboot", 0).unwrap();
-    let thread = Thread::create(&proc, "userboot", 0).unwrap();
-    let resource = Resource::create(
-        "root",
-        ResourceKind::ROOT,
-        0,
-        0x1_0000_0000,
-        ResourceFlags::empty(),
-    );
-    let vmar = proc.vmar();
-    // userboot
-    let (entry, userboot_size) = {
-        let elf = ElfFile::new(images.userboot.as_ref()).unwrap();
-        let size = elf.load_segment_size();
-        let vmar = vmar
-            .allocate(None, size, VmarFlags::CAN_MAP_RXW, PAGE_SIZE)
-            .unwrap();
-        vmar.load_from_elf(&elf).unwrap();
-        (vmar.addr() + elf.header.pt2.entry_point() as usize, size)
+kcounter!(EXCEPTIONS_USER, "exceptions.user");
+kcounter!(EXCEPTIONS_TIMER, "exceptions.timer");
+kcounter!(EXCEPTIONS_PGFAULT, "exceptions.pgfault");
+
+async fn new_thread(thread: CurrentThread) {
+    crate::kernel_hal::Thread::set_tid(thread.id(), thread.proc().id());
+    if thread.is_first_thread() {
+        thread
+            .handle_exception(ExceptionType::ProcessStarting, None)
+            .await;
     };
-    // stack
-    const STACK_PAGES: usize = 8;
-    let stack_vmo = VmObject::new_paged(STACK_PAGES);
-    let flags = MMUFlags::READ | MMUFlags::WRITE | MMUFlags::USER;
-    let stack_bottom = vmar
-        .map(None, stack_vmo.clone(), 0, stack_vmo.len(), flags)
-        .unwrap();
-    #[cfg(target_arch = "x86_64")]
-    // WARN: align stack to 16B, then emulate a 'call' (push rip)
-    let sp = stack_bottom + stack_vmo.len() - 8;
-    #[cfg(target_arch = "aarch64")]
-    let sp = stack_bottom + stack_vmo.len();
-    #[cfg(any(target_arch = "riscv32", target_arch = "riscv64"))]
-    let sp = stack_bottom + stack_vmo.len();
+    thread
+        .handle_exception(ExceptionType::ThreadStarting, None)
+        .await;
 
-    // channel
-    let (user_channel, kernel_channel) = Channel::create();
-    let handle = Handle::new(user_channel, Rights::DEFAULT_CHANNEL);
+    loop {
+        let mut cx = thread.wait_for_run().await;
+        if thread.state() == ThreadState::Dying {
+            break;
+        }
+        trace!("go to user: {:#x?}", cx);
+        debug!("switch to {}|{}", thread.proc().name(), thread.name());
+        let tmp_time = crate::kernel_hal::timer_now().as_nanos();
 
-    let mut handles = vec![Handle::new(proc.clone(), Rights::empty()); K_HANDLECOUNT];
+        // * Attention
+        // The code will enter a magic zone from here.
+        // `context run` will be executed into a wrapped library where context switching takes place.
+        // The details are available in the trapframe crate on crates.io.
 
-    // check: handle to root proc should be only
+        crate::kernel_hal::context_run(&mut cx);
 
-    let data = Vec::from(cmdline.replace(':', "\0") + "\0");
-    let msg = MessagePacket { data, handles };
-    kernel_channel.write(msg).unwrap();
+        // Back from the userspace
 
-    proc.start(&thread, entry, sp, Some(handle), 0, spawn)
-        .expect("failed to start main thread");
-    proc
-}
-
-pub fn simple_run_userboot(images: &Images<impl AsRef<[u8]>>, cmdline: &str) -> Arc<Process> {
-    let job = Job::root();
-    let proc = Process::create(&job, "userboot", 0).unwrap();
-    let thread = Thread::create(&proc, "userboot", 0).unwrap();
-    let elf = ElfFile::new(images.userboot.as_ref()).unwrap();
-    let entry =elf.header.pt2.entry_point() as usize;
-    let sp: usize = 0x8_8000_0000;
-    proc.start(&thread, entry, sp, None, 0, spawn)
-        .expect("failed to start main thread");
-    proc
-}
-
-crate::kcounter!(EXCEPTIONS_USER, "exceptions.user");
-crate::kcounter!(EXCEPTIONS_TIMER, "exceptions.timer");
-crate::kcounter!(EXCEPTIONS_PGFAULT, "exceptions.pgfault");
-
-fn spawn(thread: Arc<Thread>) {
-    let vmtoken = thread.proc().vmar().table_phys();
-    let future = async move {
-        crate::kernel_hal::Thread::set_tid(thread.id(), thread.proc().id());
-        loop {
-            let mut cx = thread.wait_for_run().await;
-            if thread.state() == ThreadState::Dying {
-                info!(
-                    "proc={:?} thread={:?} was killed",
-                    thread.proc().name(),
-                    thread.name()
-                );
-                thread.internal_exit();
-                break;
-            }
-            trace!("go to user: {:#x?}", cx);
-            debug!("switch to {}|{}", thread.proc().name(), thread.name());
-            let tmp_time = crate::kernel_hal::timer_now().as_nanos();
-            crate::kernel_hal::context_run(&mut cx);
-            let time = crate::kernel_hal::timer_now().as_nanos() - tmp_time;
-            thread.time_add(time);
-            trace!("back from user: {:#x?}", cx);
-            EXCEPTIONS_USER.add(1);
-            #[cfg(target_arch = "aarch64")]
-            let exit;
-            #[cfg(target_arch = "aarch64")]
-            match cx.trap_num {
-                0 => exit = handle_syscall(&thread, &mut cx.general).await,
-                _ => unimplemented!(),
-            }
-            #[cfg(any(target_arch = "riscv32", target_arch = "riscv64"))]
-            let exit;
-            #[cfg(any(target_arch = "riscv32", target_arch = "riscv64"))]
-            match cx.sstatus {
-                0 => {
-                    println!("unimplemented in src/zircon_loader/mod.rs spawn");
-                    unimplemented!();
-                }
-                _ => {
-                    println!("unimplemented in src/zircon_loader/mod.rs spawn");
-                    unimplemented!();
+        let time = crate::kernel_hal::timer_now().as_nanos() - tmp_time;
+        thread.time_add(time);
+        trace!("back from user: {:#x?}", cx);
+        EXCEPTIONS_USER.add(1);
+        #[cfg(target_arch = "aarch64")]
+        match cx.trap_num {
+            0 => handle_syscall(&thread, &mut cx.general).await,
+            _ => unimplemented!(),
+        }
+        #[cfg(target_arch = "x86_64")]
+        match cx.trap_num {
+            0x100 => handle_syscall(&thread, &mut cx.general).await,
+            0x20..=0x3f => {
+                kernel_hal::InterruptManager::handle(cx.trap_num as u8);
+                if cx.trap_num == 0x20 {
+                    EXCEPTIONS_TIMER.add(1);
+                    kernel_hal::yield_now().await;
                 }
             }
-            #[cfg(target_arch = "x86_64")]
-            let mut exit = false;
-            #[cfg(target_arch = "x86_64")]
-            match cx.trap_num {
-                0x100 => exit = handle_syscall(&thread, &mut cx.general).await,
-                0x20..=0x3f => {
-                    crate::kernel_hal::InterruptManager::handle(cx.trap_num as u8);
-                    if cx.trap_num == 0x20 {
-                        EXCEPTIONS_TIMER.add(1);
-                        crate::kernel_hal::yield_now().await;
-                    }
-                }
-                0xe => {
-                    EXCEPTIONS_PGFAULT.add(1);
-                    #[cfg(target_arch = "x86_64")]
-                    let flags = if cx.error_code & 0x2 == 0 {
-                        MMUFlags::READ
-                    } else {
-                        MMUFlags::WRITE
-                    };
-                    // FIXME:
-                    #[cfg(target_arch = "aarch64")]
-                    let flags = MMUFlags::WRITE;
-                    error!(
-                        "page fualt from user mode {:#x} {:#x?}",
-                        crate::crate::crate::kernel_hal::fetch_fault_vaddr(),
-                        flags
-                    );
-                    match thread
-                        .proc()
-                        .vmar()
-                        .handle_page_fault(crate::kernel_hal::fetch_fault_vaddr(), flags)
-                    {
-                        Ok(()) => {}
-                        Err(e) => {
-                            error!(
-                                "proc={:?} thread={:?} err={:?}",
-                                thread.proc().name(),
-                                thread.name(),
-                                e
-                            );
-                            error!("Page Fault from user mode {:#x?}", cx);
-                            let exception = Exception::create(
-                                thread.clone(),
-                                ExceptionType::FatalPageFault,
-                                Some(&cx),
-                            );
-                            if !exception.handle().await {
-                                exit = true;
-                            }
-                        }
-                    }
-                }
-                0x8 => {
-                    panic!("Double fault from user mode! {:#x?}", cx);
-                }
-                num => {
-                    let type_ = match num {
-                        0x1 => ExceptionType::HardwareBreakpoint,
-                        0x3 => ExceptionType::SoftwareBreakpoint,
-                        0x6 => ExceptionType::UndefinedInstruction,
-                        0x17 => ExceptionType::UnalignedAccess,
-                        _ => ExceptionType::General,
-                    };
-                    error!("User mode exception:{:?} {:#x?}", type_, cx);
-                    let exception = Exception::create(thread.clone(), type_, Some(&cx));
-                    if !exception.handle().await {
-                        exit = true;
-                    }
+            0xe => {
+                EXCEPTIONS_PGFAULT.add(1);
+                #[cfg(target_arch = "x86_64")]
+                let flags = if cx.error_code & 0x2 == 0 {
+                    MMUFlags::READ
+                } else {
+                    MMUFlags::WRITE
+                };
+                // FIXME:
+                #[cfg(target_arch = "aarch64")]
+                let flags = MMUFlags::WRITE;
+                let fault_vaddr = kernel_hal::fetch_fault_vaddr();
+                error!("page fault from user mode {:#x} {:#x?}", fault_vaddr, flags);
+                let vmar = thread.proc().vmar();
+                if vmar.handle_page_fault(fault_vaddr, flags).is_err() {
+                    error!("Page Fault from user mode: {:#x?}", cx);
+                    thread
+                        .handle_exception(ExceptionType::FatalPageFault, Some(&cx))
+                        .await;
                 }
             }
-            thread.end_running(cx);
-            if exit {
-                info!(
-                    "proc={:?} thread={:?} exited",
-                    thread.proc().name(),
-                    thread.name()
-                );
-                break;
+            0x8 => {
+                panic!("Double fault from user mode! {:#x?}", cx);
+            }
+            num => {
+                let type_ = match num {
+                    0x1 => ExceptionType::HardwareBreakpoint,
+                    0x3 => ExceptionType::SoftwareBreakpoint,
+                    0x6 => ExceptionType::UndefinedInstruction,
+                    0x17 => ExceptionType::UnalignedAccess,
+                    _ => ExceptionType::General,
+                };
+                error!("User mode exception: {:?} {:#x?}", type_, cx);
+                thread.handle_exception(type_, Some(&cx)).await;
             }
         }
-    };
-    crate::kernel_hal::Thread::spawn(Box::pin(future), vmtoken);
+        thread.end_running(cx);
+    }
+    thread
+        .handle_exception(ExceptionType::ThreadExiting, None)
+        .await;
 }
 
-async fn handle_syscall(thread: &Arc<Thread>, regs: &mut GeneralRegs) -> bool {
+fn thread_fn(thread: CurrentThread) -> Pin<Box<dyn Future<Output = ()> + Send + 'static>> {
+    Box::pin(new_thread(thread))
+}
+
+async fn handle_syscall(thread: &CurrentThread, regs: &mut GeneralRegs) {
     #[cfg(target_arch = "x86_64")]
     let num = regs.rax as u32;
     #[cfg(target_arch = "aarch64")]
     let num = regs.x16 as u32;
     #[cfg(any(target_arch = "riscv32", target_arch = "riscv64"))]
-    println!("unimplemented in src/zircon_loader/mod.rs handle_syscall");
     let num = unimplemented!();
     // LibOS: Function call ABI
     #[cfg(feature = "std")]
@@ -391,24 +287,14 @@ async fn handle_syscall(thread: &Arc<Thread>, regs: &mut GeneralRegs) -> bool {
     let args = [
         regs.x0, regs.x1, regs.x2, regs.x3, regs.x4, regs.x5, regs.x6, regs.x7,
     ];
-
-    // RISCV
-    #[cfg(feature = "std")]
     #[cfg(any(target_arch = "riscv32", target_arch = "riscv64"))]
-    println!("unimplemented in src/zircon_loader/mod.rs handle_syscall");
-    let args = unimplemented!();
-    #[cfg(not(feature = "std"))]
-    #[cfg(any(target_arch = "riscv32", target_arch = "riscv64"))]
-    println!("unimplemented in src/zircon_loader/mod.rs handle_syscall");
     let args = unimplemented!();
 
     let mut syscall = Syscall {
         regs,
-        thread: thread.clone(),
-        spawn_fn: spawn,
-        exit: false,
+        thread,
+        thread_fn,
     };
-
     let ret = syscall.syscall(num, args).await as usize;
     #[cfg(target_arch = "x86_64")]
     {
@@ -420,9 +306,18 @@ async fn handle_syscall(thread: &Arc<Thread>, regs: &mut GeneralRegs) -> bool {
     }
     #[cfg(any(target_arch = "riscv32", target_arch = "riscv64"))]
     {
-        println!("unimplemented in src/zircon_loader/mod.rs handle_syscall");
         unimplemented!();
     }
+}
 
-    syscall.exit
+pub fn simple_run_userboot(images: &Images<impl AsRef<[u8]>>, cmdline: &str) -> Arc<Process> {
+    let job = Job::root();
+    let proc = Process::create(&job, "userboot").unwrap();
+    let thread = Thread::create(&proc, "userboot").unwrap();
+    let elf = ElfFile::new(images.userboot.as_ref()).unwrap();
+    let entry =elf.header.pt2.entry_point() as usize;
+    let sp: usize = 0x8_8000_0000;
+    proc.start(&thread, entry, sp, None, 0, thread_fn)
+        .expect("failed to start main thread");
+    proc
 }

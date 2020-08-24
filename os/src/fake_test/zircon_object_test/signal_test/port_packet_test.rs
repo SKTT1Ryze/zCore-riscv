@@ -8,7 +8,7 @@ pub fn test_port_packet_size() {
     assert_eq!(size_of::<PacketUser>(), 32);
     assert_eq!(size_of::<PacketSignal>(), 32);
     assert_eq!(size_of::<PacketGuestBell>(), 32);
-    assert_eq!(size_of::<PacketGuestMem>(), 8);
+    assert_eq!(size_of::<PacketGuestMem>(), 32);
     assert_eq!(size_of::<PacketGuestIo>(), 32);
     assert_eq!(size_of::<PacketGuestVcpu>(), 32);
     assert_eq!(size_of::<PacketInterrupt>(), 32);

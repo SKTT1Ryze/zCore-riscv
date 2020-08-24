@@ -12,6 +12,7 @@ mod thread;
 pub use {
     self::exception::*, self::job::*, self::job_policy::*, self::process::*,
     self::suspend_token::*, self::thread::*,
+    alloc::sync::Arc,
 };
 
 /// Task (Thread, Process, or Job)
@@ -24,6 +25,12 @@ pub trait Task: Sync + Send {
 
     /// Resume the task
     fn resume(&self);
+
+    /// Get the exceptionate.
+    fn exceptionate(&self) -> Arc<Exceptionate>;
+
+    /// Get the debug exceptionate.
+    fn debug_exceptionate(&self) -> Arc<Exceptionate>;
 }
 
 pub const TASK_RETCODE_SYSCALL_KILL: i64 = -1024;

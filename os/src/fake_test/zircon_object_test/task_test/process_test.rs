@@ -5,13 +5,13 @@ use crate::{print, println};
 
 pub fn test_create_process() {
     let root_job = Job::root();
-    let _proc = Process::create(&root_job, "proc", 0).expect("failed to create process");
+    let _proc = Process::create(&root_job, "proc").expect("failed to create process");
     println!("test_create_process pass");
 }
 
 pub fn test_handle() {
     let root_job = Job::root();
-    let proc = Process::create(&root_job, "proc", 0).expect("failed to create process");
+    let proc = Process::create(&root_job, "proc").expect("failed to create process");
     let handle = Handle::new(proc.clone(), Rights::DEFAULT_PROCESS);
 
     let handle_value = proc.add_handle(handle);
@@ -49,7 +49,7 @@ pub fn test_handle() {
 
 pub fn test_handle_duplicate() {
     let root_job = Job::root();
-    let proc = Process::create(&root_job, "proc", 0).expect("failed to create process");
+    let proc = Process::create(&root_job, "proc").expect("failed to create process");
 
     // duplicate non-exist handle should fail.
     assert_eq!(
@@ -90,8 +90,8 @@ pub fn test_handle_duplicate() {
 
 pub fn test_get_child_in_process() {
     let root_job = Job::root();
-    let proc = Process::create(&root_job, "proc", 0).expect("failed to create process");
-    let thread = Thread::create(&proc, "thread", 0).expect("failed to create thread");
+    let proc = Process::create(&root_job, "proc").expect("failed to create process");
+    let thread = Thread::create(&proc, "thread").expect("failed to create thread");
 
     let proc: Arc<dyn KernelObject> = proc;
     assert_eq!(proc.get_child(thread.id()).unwrap().id(), thread.id());

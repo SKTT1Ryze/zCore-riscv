@@ -1,3 +1,4 @@
+use super::*;
 use super::object::*;
 use alloc::sync::Arc;
 
@@ -29,4 +30,3 @@ impl Event {
         })
     }
 }
-

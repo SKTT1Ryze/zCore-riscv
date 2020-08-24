@@ -18,6 +18,7 @@
 #![feature(const_in_array_repeat_expressions)]
 #![feature(lang_items)]
 
+
 /* #[macro_use]
 mod console; */
 mod panic;
@@ -36,6 +37,7 @@ mod linux_object;
 #[macro_use]
 mod logging;
 
+#[macro_use]
 extern crate alloc;
 
 #[macro_use]
@@ -58,10 +60,10 @@ use fake_test::{
     zircon_object_test::signal_test::test_all_in_signal_test,
     zircon_object_test::task_test::test_all_in_task_test,
     zircon_object_test::ipc_test::test_all_in_ipc_test,
-    zircon_object_test::vm_test::test_all_in_vm_test,
+    //zircon_object_test::vm_test::test_all_in_vm_test,
 };
 
-use crate::zircon_loader::{simple_run_userboot, just_run_userboot, run_userboot, Images};
+use crate::zircon_loader::{simple_run_userboot, run_userboot, Images};
 
 //entry
 global_asm!(include_str!("asm/entry.asm"));

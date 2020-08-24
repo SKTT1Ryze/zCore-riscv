@@ -2,6 +2,9 @@ use core::convert::TryFrom;
 use {super::*, crate::zircon_object::task::*};
 
 impl Syscall<'_> {
+    /// Create a new process.  
+    ///   
+    /// Upon success, handles for the new process and the root of its address space are returned.
     pub fn sys_process_create(
         &self,
         job: HandleValue,
@@ -16,11 +19,14 @@ impl Syscall<'_> {
             "proc.create: job={:#x?}, name={:?}, options={:#x?}",
             job, name, options,
         );
+        if options != 0 {
+            return Err(ZxError::INVALID_ARGS);
+        }
         let proc = self.thread.proc();
         let job = proc
             .get_object_with_rights::<Job>(job, Rights::MANAGE_PROCESS)
             .or_else(|_| proc.get_object_with_rights::<Job>(job, Rights::WRITE))?;
-        let new_proc = Process::create(&job, &name, options)?;
+        let new_proc = Process::create(&job, &name)?;
         let new_vmar = new_proc.vmar();
         let proc_handle_value = proc.add_handle(Handle::new(new_proc, Rights::DEFAULT_PROCESS));
         let vmar_handle_value = proc.add_handle(Handle::new(
@@ -32,14 +38,17 @@ impl Syscall<'_> {
         Ok(())
     }
 
+    /// Exits the currently running process.  
     pub fn sys_process_exit(&mut self, code: i64) -> ZxResult {
         info!("proc.exit: code={:?}", code);
         let proc = self.thread.proc();
         proc.exit(code);
-        self.exit = true;
         Ok(())
     }
 
+    /// Creates a thread within the specified process.  
+    ///   
+    /// Upon success a handle for the new thread is returned.
     pub fn sys_thread_create(
         &self,
         proc_handle: HandleValue,
@@ -53,15 +62,20 @@ impl Syscall<'_> {
             "thread.create: proc={:#x?}, name={:?}, options={:#x?}",
             proc_handle, name, options,
         );
-        assert_eq!(options, 0);
+        if options != 0 {
+            return Err(ZxError::INVALID_ARGS);
+        }
         let proc = self.thread.proc();
         let process = proc.get_object_with_rights::<Process>(proc_handle, Rights::MANAGE_THREAD)?;
-        let thread = Thread::create(&process, &name, options)?;
+        let thread = Thread::create(&process, &name)?;
         let handle = proc.add_handle(Handle::new(thread, Rights::DEFAULT_THREAD));
         thread_handle.write(handle)?;
         Ok(())
     }
 
+    /// Start execution on a process.  
+    ///   
+    /// This system call is similar to `zx_thread_start()`, but is used for the purpose of starting the first thread in a process.
     pub fn sys_process_start(
         &self,
         proc_handle: HandleValue,
@@ -89,10 +103,13 @@ impl Syscall<'_> {
         } else {
             None
         };
-        process.start(&thread, entry, stack, arg1, arg2, self.spawn_fn)?;
+        process.start(&thread, entry, stack, arg1, arg2, self.thread_fn)?;
         Ok(())
     }
 
+    /// Write one aspect of thread state.    
+    ///   
+    /// The thread state may only be written when the thread is halted for an exception or the thread is suspended.
     pub fn sys_thread_write_state(
         &self,
         handle: HandleValue,
@@ -112,6 +129,9 @@ impl Syscall<'_> {
         Ok(())
     }
 
+    /// Sets process as critical to job.   
+    ///   
+    /// When process terminates, job will be terminated as if `zx_task_kill()` was called on it.
     pub fn sys_job_set_critical(
         &self,
         job_handle: HandleValue,
@@ -136,6 +156,7 @@ impl Syscall<'_> {
         Ok(())
     }
 
+    /// Start execution on a thread.  
     pub fn sys_thread_start(
         &self,
         handle_value: HandleValue,
@@ -153,17 +174,22 @@ impl Syscall<'_> {
         if thread.proc().status() != Status::Running {
             return Err(ZxError::BAD_STATE);
         }
-        thread.start(entry, stack, arg1, arg2, self.spawn_fn)?;
+        thread.start(entry, stack, arg1, arg2, self.thread_fn)?;
         Ok(())
     }
 
+    /// Terminate the current running thread.   
+    ///
+    /// Causes the currently running thread to cease running and exit.
     pub fn sys_thread_exit(&mut self) -> ZxResult {
         info!("thread.exit:");
         self.thread.exit();
-        self.exit = true;
         Ok(())
     }
 
+    /// Suspend the given task.   
+    ///
+    /// > This function replaces task_suspend. When all callers are updated, `zx_task_suspend()` will be deleted and this function will be renamed ```zx_task_suspend()```.
     pub fn sys_task_suspend_token(
         &self,
         handle: HandleValue,
@@ -190,6 +216,7 @@ impl Syscall<'_> {
         Ok(())
     }
 
+    /// Kill the provided task (job, process, or thread).
     pub fn sys_task_kill(&mut self, handle: HandleValue) -> ZxResult {
         info!("task.kill: handle={:?}", handle);
         let proc = self.thread.proc();
@@ -198,32 +225,16 @@ impl Syscall<'_> {
             job.kill();
         } else if let Ok(process) = proc.get_object_with_rights::<Process>(handle, Rights::DESTROY)
         {
-            if Arc::ptr_eq(&process, &proc) {
-                //self kill, exit
-                proc.exit(TASK_RETCODE_SYSCALL_KILL);
-                self.exit = true;
-            } else {
-                process.kill();
-            }
+            process.kill();
         } else if let Ok(thread) = proc.get_object_with_rights::<Thread>(handle, Rights::DESTROY) {
-            info!(
-                "killing thread: proc={:?} thread={:?}",
-                thread.proc().name(),
-                thread.name()
-            );
-            if Arc::ptr_eq(&thread, &self.thread) {
-                //self kill, exit
-                self.thread.exit();
-                self.exit = true;
-            } else {
-                thread.kill();
-            }
+            thread.kill();
         } else {
             return Err(ZxError::WRONG_TYPE);
         }
         Ok(())
     }
 
+    /// Create a new child job object given a parent job.  
     pub fn sys_job_create(
         &self,
         parent: HandleValue,
@@ -241,12 +252,13 @@ impl Syscall<'_> {
             let parent_job = proc
                 .get_object_with_rights::<Job>(parent, Rights::MANAGE_JOB)
                 .or_else(|_| proc.get_object_with_rights::<Job>(parent, Rights::WRITE))?;
-            let child = parent_job.create_child(options)?;
+            let child = parent_job.create_child()?;
             out.write(proc.add_handle(Handle::new(child, Rights::DEFAULT_JOB)))?;
             Ok(())
         }
     }
 
+    /// Sets one or more security and/or resource policies to an empty job.  
     pub fn sys_job_set_policy(
         &self,
         handle: HandleValue,
@@ -287,6 +299,9 @@ impl Syscall<'_> {
         }
     }
 
+    /// Read from the given process's address space.  
+    ///   
+    /// > This function will eventually be replaced with something vmo-centric.
     pub fn sys_process_read_memory(
         &self,
         handle_value: HandleValue,
@@ -308,6 +323,7 @@ impl Syscall<'_> {
         Ok(())
     }
 
+    /// Write into the given process's address space.  
     pub fn sys_process_write_memory(
         &self,
         handle_value: HandleValue,

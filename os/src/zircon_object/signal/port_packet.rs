@@ -95,6 +95,13 @@ pub struct PacketGuestMem {
 #[derive(Default, Debug, Copy, Clone, Eq, PartialEq)]
 pub struct PacketGuestMem {
     pub addr: u64,
+    pub access_size: u8,
+    pub sign_extend: bool,
+    pub xt: u8,
+    pub read: bool,
+    pub _padding1: [u8; 4],
+    pub data: u64,
+    pub _reserved: u64,
 }
 
 #[repr(C)]
@@ -189,34 +196,6 @@ impl PayloadRepr {
             PayloadRepr::Interrupt(_) => PacketType::Interrupt,
         }
     }
-    fn encode(&self) -> Payload {
-        match *self {
-            PayloadRepr::User(user) => Payload { user },
-            PayloadRepr::Signal(signal) => Payload { signal },
-            PayloadRepr::GuestBell(guest_bell) => Payload { guest_bell },
-            PayloadRepr::GuestMem(guest_mem) => Payload { guest_mem },
-            PayloadRepr::GuestIo(guest_io) => Payload { guest_io },
-            PayloadRepr::GuestVcpu(guest_vcpu) => Payload { guest_vcpu },
-            PayloadRepr::Interrupt(interrupt) => Payload { interrupt },
-        }
-    }
-    #[allow(unsafe_code)]
-    fn decode(type_: PacketType, data: &Payload) -> Self {
-        unsafe {
-            match type_ {
-                PacketType::User => PayloadRepr::User(data.user),
-                PacketType::SignalOne => PayloadRepr::Signal(data.signal),
-                PacketType::SignalRep => PayloadRepr::Signal(data.signal),
-                PacketType::GuestBell => PayloadRepr::GuestBell(data.guest_bell),
-                PacketType::GuestMem => PayloadRepr::GuestMem(data.guest_mem),
-                PacketType::GuestIo => PayloadRepr::GuestIo(data.guest_io),
-                PacketType::GuestVcpu => PayloadRepr::GuestVcpu(data.guest_vcpu),
-                PacketType::Interrupt => PayloadRepr::Interrupt(data.interrupt),
-                _ => unimplemented!(),
-            }
-        }
-    }
-
     pub fn type_test(&self) -> PacketType {
         match self {
             PayloadRepr::User(_) => PacketType::User,
@@ -226,6 +205,17 @@ impl PayloadRepr {
             PayloadRepr::GuestIo(_) => PacketType::GuestIo,
             PayloadRepr::GuestVcpu(_) => PacketType::GuestVcpu,
             PayloadRepr::Interrupt(_) => PacketType::Interrupt,
+        }
+    }
+    fn encode(&self) -> Payload {
+        match *self {
+            PayloadRepr::User(user) => Payload { user },
+            PayloadRepr::Signal(signal) => Payload { signal },
+            PayloadRepr::GuestBell(guest_bell) => Payload { guest_bell },
+            PayloadRepr::GuestMem(guest_mem) => Payload { guest_mem },
+            PayloadRepr::GuestIo(guest_io) => Payload { guest_io },
+            PayloadRepr::GuestVcpu(guest_vcpu) => Payload { guest_vcpu },
+            PayloadRepr::Interrupt(interrupt) => Payload { interrupt },
         }
     }
     pub fn encode_test(&self) -> Payload {
@@ -239,8 +229,9 @@ impl PayloadRepr {
             PayloadRepr::Interrupt(interrupt) => Payload { interrupt },
         }
     }
+
     #[allow(unsafe_code)]
-    pub fn decode_test(type_: PacketType, data: &Payload) -> Self {
+    fn decode(type_: PacketType, data: &Payload) -> Self {
         unsafe {
             match type_ {
                 PacketType::User => PayloadRepr::User(data.user),

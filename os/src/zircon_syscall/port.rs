@@ -4,6 +4,7 @@ use {
 };
 
 impl Syscall<'_> {
+    /// Create an IO port.  
     pub fn sys_port_create(&self, options: u32, mut out: UserOutPtr<HandleValue>) -> ZxResult {
         info!("port.create: options={:#x}", options);
         let port_handle = Handle::new(Port::new(options)?, Rights::DEFAULT_PORT);
@@ -12,6 +13,7 @@ impl Syscall<'_> {
         Ok(())
     }
 
+    /// Wait for a packet arrival in a port.  
     pub async fn sys_port_wait(
         &self,
         handle_value: HandleValue,
@@ -29,12 +31,13 @@ impl Syscall<'_> {
         pin_mut!(future);
         let packet = self
             .thread
-            .blocking_run(future, ThreadState::BlockedPort, deadline.into())
+            .blocking_run(future, ThreadState::BlockedPort, deadline.into(), None)
             .await?;
         packet_res.write(packet)?;
         Ok(())
     }
 
+    /// Queue a packet to a port.  
     pub fn sys_port_queue(
         &self,
         handle_value: HandleValue,

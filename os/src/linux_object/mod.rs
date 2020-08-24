@@ -11,4 +11,4 @@ pub mod ipc;
 pub mod time;
 pub mod signal;
 pub mod loader;
-//pub mod thread;
+pub mod thread;
