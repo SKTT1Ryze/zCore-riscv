@@ -1,27 +1,11 @@
+//! Linux file objects
+#![deny(missing_docs)]
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 
 use rcore_fs::vfs::*;
 use rcore_fs_devfs::{special::*, DevFS};
 use rcore_fs_mountfs::MountFS;
 use rcore_fs_ramfs::RamFS;
-
-use {
-    super::error::*,
-    async_trait::async_trait,
-    downcast_rs::impl_downcast,
-    crate::zircon_object::object::*,
-    core::convert::TryFrom,
-    super::process::LinuxProcess,
-};
-
-mod device;
-mod fcntl;
-mod file;
-mod ioctl;
-mod pipe;
-mod pseudo;
-mod random;
-mod stdio;
 
 pub use self::device::*;
 pub use self::fcntl::*;
@@ -32,6 +16,21 @@ pub use self::random::*;
 pub use self::stdio::*;
 pub use rcore_fs::vfs;
 
+use super::error::*;
+use super::process::LinuxProcess;
+use async_trait::async_trait;
+use core::convert::TryFrom;
+use downcast_rs::impl_downcast;
+use crate::zircon_object::object::*;
+
+mod device;
+mod fcntl;
+mod file;
+mod ioctl;
+mod pipe;
+mod pseudo;
+mod random;
+mod stdio;
 
 #[async_trait]
 /// Generic file interface

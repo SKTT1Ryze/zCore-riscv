@@ -17,7 +17,7 @@
 #![feature(new_uninit)]
 #![feature(const_in_array_repeat_expressions)]
 #![feature(lang_items)]
-
+#![feature(bool_to_option)]
 
 /* #[macro_use]
 mod console; */
@@ -31,7 +31,7 @@ mod fake_test;
 mod zircon_syscall;
 mod zircon_loader;
 mod linux_object;
-
+mod linux_syscall;
 //mod lang;
 
 #[macro_use]
