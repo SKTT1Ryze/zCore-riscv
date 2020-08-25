@@ -335,6 +335,21 @@ impl VmObject {
     pub fn is_contiguous(&self) -> bool {
         self.inner.is_contiguous()
     }
+
+    /// Three functions for test
+    pub fn test_write(&self, page: usize, value: u8) {
+        self.write(page * PAGE_SIZE, &[value]).unwrap();
+    }
+
+    pub fn test_read(&self, page: usize) -> u8 {
+        let mut buf = [0; 1];
+        self.read(page * PAGE_SIZE, &mut buf).unwrap();
+        buf[0]
+    }
+    
+    pub fn inner_test(&self) -> Arc<dyn VMObjectTrait> {
+        self.inner.clone()
+    }
 }
 
 impl Deref for VmObject {
@@ -410,6 +425,13 @@ pub struct VmoInfo {
     /// VMO mapping cache policy.
     cache_policy: u32,
 }
+
+impl VmoInfo {
+    pub fn get_committed_bytes_test(&self) -> u64 {
+        self.committed_bytes
+    }
+}
+
 
 bitflags! {
     #[derive(Default)]

@@ -14,5 +14,5 @@ pub fn alloc_test() {
     for (i, value) in vec.into_iter().enumerate() {
         assert_eq!(value, i);
     }
-    println!("test {} pass", "alloc_test");
+    println!("alloc_test pass");
 }

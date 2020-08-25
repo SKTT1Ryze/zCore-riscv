@@ -2,6 +2,8 @@ use crate::zircon_object::ipc::*;
 use crate::zircon_object::object::*;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
+use alloc::boxed::Box;
+use core::sync::atomic::{AtomicBool, Ordering};
 use crate::{print, println};
 
 pub fn test_basics_channel() {
@@ -66,7 +68,7 @@ pub fn test_peer_closed_channel() {
     println!("test_peer_closed pass");
 }
 
-/* pub fn test_signal() {
+pub fn test_signal() {
     let (channel0, channel1) = Channel::create();
 
     // initial status is writable and not readable.
@@ -100,7 +102,8 @@ pub fn test_peer_closed_channel() {
     assert!(!peer_closed.load(Ordering::SeqCst));
     drop(channel1);
     assert!(peer_closed.load(Ordering::SeqCst));
-} */
+    println!("test_signal pass");
+}
 
 /* #[async_std::test]
     async fn call() {

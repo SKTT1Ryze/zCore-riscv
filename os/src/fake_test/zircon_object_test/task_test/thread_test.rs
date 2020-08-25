@@ -1,10 +1,16 @@
 use crate::zircon_object::task::*;
+use crate::zircon_object::object::KernelObject;
 use crate::{print, println};
 
 pub fn test_create_thread() {
     let root_job = Job::root();
     let proc = Process::create(&root_job, "proc").expect("failed to create process");
-    let _thread = Thread::create(&proc, "thread").expect("failed to create thread");
+    let thread = Thread::create(&proc, "thread").expect("failed to create thread");
+    assert_eq!(thread.flags(), ThreadFlag::empty());
+
+    let thread: Arc<dyn KernelObject> = thread;
+    assert_eq!(thread.related_koid(), proc.id());
+    assert!(Arc::ptr_eq(&proc.get_child(thread.id()).unwrap(), &thread));
     println!("test_create_thread pass");
 }
 

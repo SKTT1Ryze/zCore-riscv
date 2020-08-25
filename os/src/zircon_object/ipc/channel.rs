@@ -27,7 +27,8 @@ use {
 /// all the handles in the next message are atomically moved into the
 /// receiving process' handle table. On failure, the channel retains ownership.
 pub struct Channel {
-    base: KObjectBase,
+    // should be private here, make it public for test
+    pub base: KObjectBase,
     _counter: CountHelper,
     peer: Weak<Channel>,
     recv_queue: Mutex<VecDeque<T>>,
@@ -151,6 +152,7 @@ impl Channel {
     fn peer_closed(&self) -> bool {
         self.peer.strong_count() == 0
     }
+
 }
 
 impl Drop for Channel {

@@ -228,6 +228,11 @@ impl Job {
             parent.remove_child(&self.inner.lock().self_ref)
         }
     }
+
+    /// Get inner for test
+    pub fn killed_test(&self) -> bool {
+        self.inner.lock().killed
+    }
 }
 
 impl Task for Job {

@@ -1,13 +1,14 @@
 use crate::zircon_object::ipc::*;
 use crate::zircon_object::object::*;
+use alloc::sync::Arc;
 use crate::{print, println};
 
 const SOCKET_SIZE: usize = 128 * 2048;
 
-/* pub fn test_basics_socket() {
+pub fn test_basics_socket() {
     assert_eq!(Socket::create(1 << 10).unwrap_err(), ZxError::INVALID_ARGS);
     assert_eq!(
-        Socket::create(SocketFlags::SOCKET_PEEK.bits).unwrap_err(),
+        Socket::create(SocketFlags::SOCKET_PEEK.bits()).unwrap_err(),
         ZxError::INVALID_ARGS
     );
     let (end0, end1) = Socket::create(1).unwrap();
@@ -20,7 +21,8 @@ const SOCKET_SIZE: usize = 128 * 2048;
     drop(end1);
     assert_eq!(end0.peer().unwrap_err(), ZxError::PEER_CLOSED);
     assert_eq!(end0.related_koid(), 0);
-} */
+    println!("test_basics_socket pass");
+}
 
 pub fn test_stream() {
     let (end0, end1) = Socket::create(0).unwrap();
@@ -83,6 +85,7 @@ pub fn test_stream() {
     assert!(!end0.signal().contains(Signal::WRITABLE));
     end1.read(false, &mut [0; 1]).unwrap();
     assert!(end0.signal().contains(Signal::WRITABLE));
+    println!("test_stream pass");
 }
 
 /* pub fn test_datagram() {

@@ -13,8 +13,10 @@ pub fn test_all_in_ipc_test() {
     test_basics_channel();
     test_read_write_channel();
     test_peer_closed_channel();
-    test_test_basics_fifo();
+    test_signal();
+    test_basics_fifo();
     test_read_write_fifo();
+    test_basics_socket();
     test_stream();
     test_threshold();
     test_shutdown();

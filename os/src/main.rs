@@ -60,7 +60,7 @@ use fake_test::{
     zircon_object_test::signal_test::test_all_in_signal_test,
     zircon_object_test::task_test::test_all_in_task_test,
     zircon_object_test::ipc_test::test_all_in_ipc_test,
-    //zircon_object_test::vm_test::test_all_in_vm_test,
+    zircon_object_test::vm_test::test_all_in_vm_test,
 };
 
 use crate::zircon_loader::{simple_run_userboot, run_userboot, Images};
@@ -81,8 +81,8 @@ pub extern "C" fn rust_main(ramfs_data: &[u8], cmdline: &str) -> ! {
     //page_table_test();
     test_all_in_object_test();
     test_all_in_signal_test();
-    test_all_in_task_test();
     test_all_in_ipc_test();
+    test_all_in_task_test();
     //test_all_in_vm_test();
     let images = Images::<&[u8]> {
         userboot: include_bytes!("./hello"),

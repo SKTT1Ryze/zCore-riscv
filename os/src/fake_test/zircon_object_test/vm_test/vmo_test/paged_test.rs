@@ -32,7 +32,7 @@ pub fn test_zero_page_write() {
 
     // no committed pages
     for vmo in &vmos {
-        assert_eq!(vmo.get_info().committed_bytes(), 0);
+        assert_eq!(vmo.get_info().get_committed_bytes_test(), 0);
     }
 
     // copy-on-write
@@ -41,7 +41,7 @@ pub fn test_zero_page_write() {
         for j in 0..3 {
             assert_eq!(vmos[j].test_read(0), if j <= i { j as u8 } else { 0 });
             assert_eq!(
-                vmos[j].get_info().committed_bytes() as usize,
+                vmos[j].get_info().get_committed_bytes_test() as usize,
                 if j <= i { PAGE_SIZE } else { 0 }
             );
         }
@@ -57,8 +57,8 @@ pub fn test_overflow() {
     vmo1.test_write(1, 2);
     let vmo2 = vmo1.create_child(false, 0, 3 * PAGE_SIZE).unwrap();
     vmo2.test_write(2, 3);
-    assert_eq!(vmo0.get_info().committed_bytes() as usize, PAGE_SIZE);
-    assert_eq!(vmo1.get_info().committed_bytes() as usize, PAGE_SIZE);
-    assert_eq!(vmo2.get_info().committed_bytes() as usize, PAGE_SIZE);
+    assert_eq!(vmo0.get_info().get_committed_bytes_test() as usize, PAGE_SIZE);
+    assert_eq!(vmo1.get_info().get_committed_bytes_test() as usize, PAGE_SIZE);
+    assert_eq!(vmo2.get_info().get_committed_bytes_test() as usize, PAGE_SIZE);
     println!("test_overflow pass");
 }
