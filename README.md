@@ -3,14 +3,17 @@ by @SKTT1Ryze
 run zCore on qemu of riscv64  
 
 ## 进度
-- [x] 搭建框架
-- [x] 简易版内核对象框架
-- [x] 内核对象
-- [x] 内核对象测试模块
-- [x] zircon 系统调用
+- [x] 运行环境
+- [x] kernel-hal
+- [x] kernel-hal-bare
+- [x] zircon-object
+- [x] zircon-syscall
 - [x] zircon-loader
 - [x] Memory (maybe)
 - [x] Frame Allocator
+- [x] linux-object
+- [x] linux-syscall
+- [x] fake_test
 - [ ] ......
 
 ## 分析
@@ -31,6 +34,8 @@ run zCore on qemu of riscv64
 + 写一个简单 Fuchsia 小程序替代 userboot.so，先看看运行效果
 + 利用 loader 层底下的实现暂时先重写一个简陋的 zircon-loader，先让整个框架能跑在 loader 层以上，能在上层环境输出，以达到验证底层代码正确性的效果
 + 参照 rCore-Tutorial，整个重写 zircon-loader，不执着于跑 Fuchsia 用户程序的思路，而是跑自己用 Rust 写的用户程序
++ 往 Linux 分支发展  
+
 
 ## 做了哪些：
 + 整个运行环境的搭建
@@ -44,9 +49,14 @@ run zCore on qemu of riscv64
 
 
 ## 正在进行：
-再经过研究 zCore 源码和各种考虑之后，目前决定先简单重写一下 zircon-loader 层，具体来讲就是让重写的 loader 加载一个用 rustc 编译的面向 riscv 平台的 elf 文件，然后让进程去运行它，运行接口保留原来 zCore 的接口。实现方式将沿用 rCore-Tutorial 里面加载用户程序的方式。  
-但是上述功能的实现需要我理解 zCore 里面文件系统是怎么运作的，目前我对于着一块还是比较陌生。  
-同时这样做也是暂时放弃了和 Fuchsia 的对接，后续会如何发展目前还得不出结论。  
-往后要复习考试，可能进度会停滞一些了，在复习期间会抽时间给 zCore 加一点单元测试，同时也能使我更全面地理解 zCore。  
+~~再经过研究 zCore 源码和各种考虑之后，目前决定先简单重写一下 zircon-loader 层，具体来讲就是让重写的 loader 加载一个用 rustc 编译的面向 riscv 平台的 elf 文件，然后让进程去运行它，运行接口保留原来 zCore 的接口。实现方式将沿用 rCore-Tutorial 里面加载用户程序的方式.~~  
+~~但是上述功能的实现需要我理解 zCore 里面文件系统是怎么运作的，目前我对于着一块还是比较陌生。~~  
+~~同时这样做也是暂时放弃了和 Fuchsia 的对接，后续会如何发展目前还得不出结论。  
+往后要复习考试，可能进度会停滞一些了，在复习期间会抽时间给 zCore 加一点单元测试，同时也能使我更全面地理解 zCore。~~  
+
+zCore 有两个分支，一个是对接 Fuchsia 的 zircon 分支，另外一个是在上面跑 linux 程序的 linux 分支。  
+经过在 22 号的会议上的讨论，向勇老师提出既然对接 Fuchsia 行不通，那么就可以考虑在inux 分支上移植到 riscv，因为在 rCore 中已经有功移植到 riscv 的成功先例。因此当前正在进行的是搭建 linux 分支的运行环境，然后希望在月底之前以用 linux-loader 运行一个 elf 目标程序。  
+
+
 
 
