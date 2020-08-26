@@ -25,6 +25,7 @@ use {
     crate::kernel_hal::{user::*, GeneralRegs},
     crate::linux_object::{error::*, fs::FileDesc, process::*},
     crate::zircon_object::{object::*, task::*, vm::VirtAddr},
+    crate::println,
 };
 
 mod consts;
@@ -256,6 +257,7 @@ impl Syscall<'_> {
     #[cfg(any(target_arch = "riscv32", target_arch = "riscv64"))]
     /// syscall specified for riscv
     async fn riscv_syscall(&mut self, sys_type: Sys, args: [usize; 6]) -> SysResult {
+        println!("run in riscv_syscall");
         let [a0, a1, a2, _a3, _a4, _a5] = args;
         match sys_type {
             Sys::OPEN => self.sys_open(a0.into(), a1, a2),

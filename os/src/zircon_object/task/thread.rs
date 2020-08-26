@@ -258,6 +258,10 @@ impl Thread {
                 context.general.x0 = arg1;
                 context.general.x1 = arg2;
             }
+            #[cfg(any(target_arch = "riscv32", target_arch = "riscv64"))]
+            {
+                unimplemented!();
+            }
             inner.change_state(ThreadState::Running, &self.base);
         }
         let vmtoken = self.proc().vmar().table_phys();
@@ -274,6 +278,10 @@ impl Thread {
             #[cfg(target_arch = "x86_64")]
             {
                 context.general.rflags |= 0x3202;
+            }
+            #[cfg(any(target_arch = "riscv32", target_arch = "riscv64"))]
+            {
+                unimplemented!();
             }
             inner.change_state(ThreadState::Running, &self.base);
         }

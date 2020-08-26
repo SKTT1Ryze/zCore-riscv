@@ -310,7 +310,7 @@ async fn handle_syscall(thread: &CurrentThread, regs: &mut GeneralRegs) {
     }
 }
 
-pub fn simple_run_userboot(images: &Images<impl AsRef<[u8]>>, cmdline: &str) -> Arc<Process> {
+pub fn simple_run_userboot_zircon(images: &Images<impl AsRef<[u8]>>, cmdline: &str) -> Arc<Process> {
     let job = Job::root();
     let proc = Process::create(&job, "userboot").unwrap();
     let thread = Thread::create(&proc, "userboot").unwrap();

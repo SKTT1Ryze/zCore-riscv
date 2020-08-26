@@ -5,6 +5,8 @@ use riscv::paging::{PageTableFlags as PTF, *};
 use riscv::register::satp;
 use crate::{print, println};
 use core::fmt::{Arguments, Write};
+
+
 /// Page Table
 #[repr(C)]
 pub struct PageTableImpl {
@@ -169,11 +171,30 @@ impl FrameDeallocator for FrameAllocatorImpl {
 
 pub fn init() {}
 
-#[export_name = "hal_serial_write"]
 pub fn putfmt(fmt: Arguments) {
     println!("unimplemented in src/kernel_hal_bare/arch/riscv64/mod.rs putfmt");
     unimplemented!()
     
+}
+
+/// Put a char by serial interrupt handler.
+fn serial_put(mut x: u8) {
+    unimplemented!();
+}
+
+#[export_name = "hal_serial_set_callback"]
+pub fn serial_set_callback(callback: Box<dyn Fn() -> bool + Send + Sync>) {
+    unimplemented!()
+}
+
+#[export_name = "hal_serial_read"]
+pub fn serial_read(buf: &mut [u8]) -> usize {
+    unimplemented!()
+}
+
+#[export_name = "hal_serial_write"]
+pub fn serial_write(s: &str) {
+    unimplemented!();
 }
 
 #[export_name = "hal_timer_now"]

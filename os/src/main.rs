@@ -32,6 +32,7 @@ mod zircon_syscall;
 mod zircon_loader;
 mod linux_object;
 mod linux_syscall;
+mod linux_loader;
 //mod lang;
 
 #[macro_use]
@@ -63,14 +64,14 @@ use fake_test::{
     zircon_object_test::vm_test::test_all_in_vm_test,
 };
 
-use crate::zircon_loader::{simple_run_userboot, run_userboot, Images};
-
+use crate::zircon_loader::{simple_run_userboot_zircon, Images};
+use crate::linux_loader::{run};
 //entry
 global_asm!(include_str!("asm/entry.asm"));
 
 // the first function to be called after _start
 #[no_mangle]
-pub extern "C" fn rust_main(ramfs_data: &[u8], cmdline: &str) -> ! {
+pub extern "C" fn rust_main(ramfs_data: &'static mut [u8], cmdline: &str) -> ! {
     println!("Welcome to zCore on riscv64");
     memory::init();
     alloc_test();
@@ -84,18 +85,51 @@ pub extern "C" fn rust_main(ramfs_data: &[u8], cmdline: &str) -> ! {
     test_all_in_ipc_test();
     test_all_in_task_test();
     //test_all_in_vm_test();
+    //run_with_zircon_loader(ramfs_data, cmdline);
+    run_with_linux_loader(ramfs_data, cmdline);
+    unreachable!();
+}
+
+fn run_with_zircon_loader(ramfs_data: &[u8], cmdline: &str) {
     let images = Images::<&[u8]> {
         userboot: include_bytes!("./hello"),
         vdso: include_bytes!("./hello_world"),
         zbi: ramfs_data,
     };
     //let _proc = just_run_userboot(&images, cmdline);
-    let _proc = simple_run_userboot(&images, cmdline);
-    run();
-    unreachable!();
+    let _proc = simple_run_userboot_zircon(&images, cmdline);
+    run_loop();
 }
 
-fn run() -> ! {
+fn run_with_linux_loader(ramfs_data: &'static mut [u8], _cmdline: &str) {
+    use alloc::boxed::Box;
+    use alloc::sync::Arc;
+    use alloc::vec;
+    use linux_object::fs::MemBuf;
+    use linux_object::fs::STDIN;
+    println!("run with linux loader");
+    crate::kernel_hal_bare::serial_set_callback(Box::new({
+        move || {
+            let mut buffer = [0; 255];
+            let len = kernel_hal_bare::serial_read(&mut buffer);
+            for c in &buffer[..len] {
+                STDIN.push((*c).into());
+                kernel_hal_bare::serial_write(alloc::format!("{}", *c as char).as_str());
+            }
+            false
+        }
+    }));
+
+    let args = vec!["/bin/busybox".into(), "sh".into()];
+    let envs = vec!["PATH=/usr/sbin:/usr/bin:/sbin:/bin:/usr/x86_64-alpine-linux-musl/bin".into()];
+
+    let device = Arc::new(MemBuf::new(ramfs_data));
+    let rootfs = rcore_fs_sfs::SimpleFileSystem::open(device).unwrap();
+    let _proc = linux_loader::run(args, envs, rootfs);
+    run_loop();
+}
+
+fn run_loop() -> ! {
     let mut counter = 0;
     loop {
         counter += 1;

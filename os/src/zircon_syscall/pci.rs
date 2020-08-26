@@ -63,6 +63,23 @@ impl Syscall<'_> {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
+    #[cfg(any(target_arch = "riscv32", target_arch = "riscv64"))]
+    pub fn sys_pci_cfg_pio_rw(
+        &self,
+        handle: HandleValue,
+        bus: u8,
+        dev: u8,
+        func: u8,
+        offset: u8,
+        mut value_ptr: UserInOutPtr<u32>,
+        width: usize,
+        write: bool,
+    ) -> ZxResult {
+        unimplemented!()
+    }
+
+
     // TODO: review
     pub fn sys_pci_init(&self, handle: HandleValue, init_buf: usize, len: u32) -> ZxResult {
         info!(
@@ -112,6 +129,15 @@ impl Syscall<'_> {
                     return Err(ZxError::INVALID_ARGS);
                 }
                 addr_win.bus_end = new_bus_end as u8;
+            }
+        }
+        #[cfg(any(target_arch = "riscv32", target_arch = "riscv64"))]
+        {
+            let num_buses = unimplemented!();
+            let mut end: u64 = unimplemented!();
+            let high_limit: u64 = unimplemented!();
+            if end > high_limit {
+                unimplemented!();
             }
         }
         if addr_win.cfg_space_type == PCI_CFG_SPACE_TYPE_MMIO {

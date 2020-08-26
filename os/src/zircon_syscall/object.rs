@@ -143,6 +143,10 @@ impl Syscall<'_> {
                 self.regs.fsbase = fsbase;
                 Ok(())
             }
+            #[cfg(any(target_arch = "riscv32", target_arch = "riscv64"))]
+            Property::RegisterFs => {
+                unimplemented!()
+            }
             Property::ProcessBreakOnLoad => {
                 let addr = UserInPtr::<usize>::from_addr_size(buffer, buffer_size)?.read()?;
                 proc.get_object_with_rights::<Process>(handle_value, Rights::SET_PROPERTY)?

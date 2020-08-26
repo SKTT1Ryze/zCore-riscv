@@ -328,6 +328,10 @@ impl Syscall<'_> {
                 a6 as _,
                 a7 != 0,
             ),
+            #[cfg(any(target_arch = "riscv32", target_arch = "riscv64"))]
+            Sys::PCI_CFG_PIO_RW => {
+                unimplemented!()
+            },
             Sys::PCI_INIT => self.sys_pci_init(a0 as _, a1 as _, a2 as _),
             Sys::PCI_GET_NTH_DEVICE => {
                 self.sys_pci_get_nth_device(a0 as _, a1 as _, a2.into(), a3.into())
