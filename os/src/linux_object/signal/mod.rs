@@ -12,6 +12,7 @@ pub use self::action::*;
 #[derive(Clone, Debug)]
 pub struct MachineContext {
     // gregs
+    // should be change to ricsv register
     pub r8: usize,
     pub r9: usize,
     pub r10: usize,

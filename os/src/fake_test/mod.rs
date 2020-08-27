@@ -9,3 +9,4 @@ pub use kernel_hal_test::*;
 pub use kernel_hal_bare_test::*;
 
 pub mod zircon_object_test;
+pub mod linux_object_test;
