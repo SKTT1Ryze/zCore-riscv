@@ -20,6 +20,7 @@ zCore 是一个微内核，它是用 Rust 语言重新实现了 Google 开发的
 ---
 
 ## 目标 => 在 riscv 架构下的虚拟机 qemu 中跑 zCore
+github 传送门：[zCore-riscv](https://github.com/SKTT1Ryze/zCore-riscv)  
 
 ---
 
