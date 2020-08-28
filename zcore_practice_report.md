@@ -7,18 +7,19 @@ Run zCore on qemu of riscv
 
 车春池
 2020.08.29
+@ 华中科技大学 东十二舍 308
 
 ---
 
 ## 前言
-zCore 是一个微内核，它是用 Rust 语言重新实现了 Fuchsia 的微内核 zircon 的一个项目。  
-[下一代 Rust OS： zCore 正式发布](https://zhuanlan.zhihu.com/p/137733625)  
+zCore 是一个微内核，它是用 Rust 语言重新实现了 Google 开发的操作系统 Fuchsia 的微内核 zircon 的一个项目。  
+[下一代 Rust OS： zCore 正式发布](https://zhuanlan.zhihu.com/p/137733625)    
+
+**zCore 目前只支持 x86 架构（mips ？）**
 
 ---
 
-## 目标
-+ zCore 目前只支持 x86 架构（mips ？）
-+ 在 riscv 架构下的虚拟机 qemu 中跑 zCore  
+## 目标 => 在 riscv 架构下的虚拟机 qemu 中跑 zCore
 
 ---
 
@@ -27,14 +28,15 @@ zCore 是一个微内核，它是用 Rust 语言重新实现了 Fuchsia 的微�
 + kernel-hal-bare/src/arch/riscv.rs
 + 构建 zCore 的各个 Rust 库除了 rboot 外基本上都支持 riscv
 + rCore 是支持 riscv 的
++ 刘丰源学长曾将 zCore 移植到了 mips 架构上
 
 ---
 
 ## 实现方案
-+ 基于 OpenSBI 的运行环境 zCore-riscv
++ 基于 OpenSBI 搭建运行环境 zCore-riscv（zCore 在 x86 和 riscv 上 bootloader 的区别）
 + 一步步将原 zCore 中的模块移植到 riscv 的运行环境中
 + 为 zCore-riscv 添加测试模块
-+ 在底层的模块中为架构相关的代码添加 riscv 支持（unimplemented!）
++ 在底层的模块中为架构相关的代码添加 riscv 支持（unimplemented!宏）
 + 在裸机环境下调用 loader 层（遇到了障碍）
 
 ---
@@ -55,23 +57,26 @@ zCore 是一个微内核，它是用 Rust 语言重新实现了 Fuchsia 的微�
 
 解决思路： 
 + 放弃对接 Fuchsia && 转战 Linux 路线
-+ 阅读 zCore 和 rCore Makefile，理解它俩是怎么运行起来的，然后再考虑怎么改善这个简陋的运行环境
++ 阅读 zCore 和 rCore 的 Makefile，理解它俩是怎么运行起来的，然后再考虑怎么改善这个简陋的运行环境
+
+一点小困难：原 zCore 代码的更新  
 
 ---
 
 ## 遇到的一些小插曲
 + 重写 linker.ld
-+ 重写 memory 模块
++ 重写 memory 模块，hal_frame_alloc，hal_frame_alloc_contiguous，hal_frame_dealloc  
++ 一个小疑惑（or 惊喜？）：riscv64.img，x86_64.img（待阅读 Makefile）
 
 ---
 
 ## 后续工作的方向思路
-+ 为底层代码添加 riscv 支持（riscv 官方文档，rCore 中的实现）
-+ 完善运行环境（rCore 和 zCore 的源码）
-+ Rust 语言本身
-+ 同步完善相关文档
++ 为底层代码添加 riscv 支持（阅读 riscv 官方文档和 rCore 中的实现）
++ 完善运行环境（阅读 rCore 和 zCore 的源码和 Makefile）（RustSBI？）
++ 加深对 Rust 语言本身的认识
++ 同步完善记录文档
 
 ---
 
 # 谢谢听讲！
-PS：感谢老师，学长们的付出，还有清华大学和鹏城实验室提供的实习机会。  
+PS：感谢老师，学长们的付出，也感谢清华大学还有鹏城实验室提供的实习机会。  
