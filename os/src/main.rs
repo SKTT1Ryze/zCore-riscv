@@ -18,6 +18,18 @@
 #![feature(const_in_array_repeat_expressions)]
 #![feature(lang_items)]
 #![feature(bool_to_option)]
+#![feature(custom_test_frameworks)]
+#![test_runner(crate::test_runner)]
+#![reexport_test_harness_main = "test_main"]
+
+
+#[cfg(test)]
+fn test_runner(tests: &[&dyn Fn()]) {
+    println!("Running {} tests...", tests.len());
+    for test in tests {
+        test();
+    }
+}
 
 /* #[macro_use]
 mod console; */
@@ -74,6 +86,10 @@ global_asm!(include_str!("asm/entry.asm"));
 pub extern "C" fn rust_main(ramfs_data: &'static mut [u8], cmdline: &str) -> ! {
     println!("Welcome to zCore on riscv64");
     memory::init();
+
+    #[cfg(test)]
+    test_main();
+
     alloc_test();
     trapframe_test();
     fill_random_test();
