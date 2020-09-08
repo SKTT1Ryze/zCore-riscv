@@ -9,7 +9,6 @@ pub fn page_table_test() {
     let paddr: PhysAddr = 0x80201000;
     let flags = MMUFlags::USER;
     let map_result = new_page_table.map(vaddr, paddr, flags);
-    println!("page table test pass here");
     match map_result {
         Ok(_) => {
             println!("map succeed");

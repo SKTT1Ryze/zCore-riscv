@@ -78,15 +78,15 @@ pub extern "C" fn rust_main(ramfs_data: &'static mut [u8], cmdline: &str) -> ! {
     trapframe_test();
     fill_random_test();
     frame_test();
-    //pmem_test();
+    pmem_test();
     //page_table_test();
     test_all_in_object_test();
     test_all_in_signal_test();
     test_all_in_ipc_test();
     test_all_in_task_test();
-    //test_all_in_vm_test();
+    test_all_in_vm_test();
     //run_with_zircon_loader(ramfs_data, cmdline);
-    run_with_linux_loader(ramfs_data, cmdline);
+    //run_with_linux_loader(ramfs_data, cmdline);
     unreachable!();
 }
 

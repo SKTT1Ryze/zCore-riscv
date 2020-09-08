@@ -21,6 +21,11 @@ pub struct Thread {
     id: ThreadId,
 }
 
+#[allow(improper_ctypes)]
+extern "C" {
+    fn hal_frame_dealloc(paddr: &PhysAddr);
+}
+
 impl Thread {
     /// Spawn a new thread.
     #[linkage = "weak"]
@@ -240,8 +245,11 @@ impl Drop for PhysFrame {
     #[linkage = "weak"]
     #[export_name = "hal_frame_dealloc_unimplemented"]
     fn drop(&mut self) {
-        println!("unimplemented in src/kernel_hal/dummy.rs impl Drop for PhysFrame");
-        unimplemented!()
+        //println!("unimplemented in src/kernel_hal/dummy.rs impl Drop for PhysFrame");
+        //unimplemented!()
+        unsafe {
+            hal_frame_dealloc(&self.paddr);    
+        }
     }
 }
 
@@ -249,16 +257,18 @@ impl Drop for PhysFrame {
 #[linkage = "weak"]
 #[export_name = "hal_pmem_read_unimplemented"]
 pub fn pmem_read(_paddr: PhysAddr, _buf: &mut [u8]) {
-    println!("unimplemented in src/kernel_hal/dummy.rs pmem_read");
-    unimplemented!()
+    //println!("unimplemented in src/kernel_hal/dummy.rs pmem_read");
+    crate::kernel_hal_bare::pmem_read(_paddr, _buf)
+    //unimplemented!()
 }
 
 /// Write physical memory to `paddr` from `buf`.
 #[linkage = "weak"]
 #[export_name = "hal_pmem_write_unimplemented"]
 pub fn pmem_write(_paddr: PhysAddr, _buf: &[u8]) {
-    println!("unimplemented in src/kernel_hal/dummy.rs pmem_write");
-    unimplemented!()
+    //println!("unimplemented in src/kernel_hal/dummy.rs pmem_write");
+    crate::kernel_hal_bare::pmem_write(_paddr, _buf);
+    //unimplemented!()
 }
 
 /// Copy content of `src` frame to `target` frame.

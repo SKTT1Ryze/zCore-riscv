@@ -2,7 +2,7 @@ use {
     bitmap_allocator::BitAlloc,
     buddy_system_allocator::LockedHeap,
     spin::Mutex,
-    riscv::paging::{PageTable,PageTableFlags as EF},
+    riscv::paging::{PageTable, PageTableFlags as EF},
 };
 
 use crate::println;
@@ -81,8 +81,8 @@ pub extern "C" fn hal_pt_map_kernel(pt: &mut PageTable, current: &PageTable) {
     /* let ekernel = current[KERNEL_PM4].clone();
     let ephysical = current[PHYSICAL_MEMORY_PM4].clone();
     pt[KERNEL_PM4].set_addr(ekernel.addr(), ekernel.flags() | EF::GLOBAL);
-    pt[PHYSICAL_MEMORY_PM4].set_addr(ephysical.addr(), ephysical.flags() | EF::GLOBAL);
-     */
+    pt[PHYSICAL_MEMORY_PM4].set_addr(ephysical.addr(), ephysical.flags() | EF::GLOBAL); */
+    
     println!("unimplemented in src/memory/head.rs hal_pt_map_kernel");
     //unimplemented!()
 }
