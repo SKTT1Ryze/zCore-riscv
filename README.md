@@ -56,7 +56,7 @@ run zCore on qemu of riscv64
 往后要复习考试，可能进度会停滞一些了，在复习期间会抽时间给 zCore 加一点单元测试，同时也能使我更全面地理解 zCore。~~  
 
 ~~zCore 有两个分支，一个是对接 Fuchsia 的 zircon 分支，另外一个是在上面跑 linux 程序的 linux 分支。~~  
-~~经过在 22 号的会议上的讨论，向勇老师提出既然对接 Fuchsia 行不通，那么就可以考虑在inux 分支上移植到 riscv，因为在 rCore 中已经有功移植到 riscv 的成功先例。因此当前正在进行的是搭建 linux 分支的运行环境，然后希望在月底之前可以在 rust_main 函数中调用 linux_loader 中的函数。  ~~  
+~~经过在 22 号的会议上的讨论，向勇老师提出既然对接 Fuchsia 行不通，那么就可以考虑在inux 分支上移植到 riscv，因为在 rCore 中已经有功移植到 riscv 的成功先例。因此当前正在进行的是搭建 linux 分支的运行环境，然后希望在月底之前可以在 rust_main 函数中调用 linux_loader 中的函数.~~  
 
 kernel-hal-bare 和 kernel-hal 层的 riscv 实现。  
 
